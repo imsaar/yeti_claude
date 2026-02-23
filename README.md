@@ -46,7 +46,7 @@ The enclosure is the [Compagnon 309 by Leroyd](https://makerworld.com) on MakerW
 | Buzzer (optional) | GPIO 5 |
 | Vibration motor (optional) | GPIO 10 |
 
-> **Note:** If the touch sensor is unresponsive, swap `TOUCH_PIN` in `config.h` to GPIO 5. Some TTP223 modules only work on GPIO 5 with certain boards.
+> **Note:** The touch sensor input is configured with `INPUT_PULLDOWN` to minimize noise and prevent phantom triggers. If the sensor is unresponsive, swap `TOUCH_PIN` in `config.h` to GPIO 5. Some TTP223 modules only work on GPIO 5 with certain boards.
 
 ### 3D Print Settings
 
@@ -148,11 +148,17 @@ Idle animations run continuously: eyes blink every ~3.5 s, pupils wander every ~
 Double-tap from face mode to enter info mode. Single-tap to cycle through three screens.
 
 **Screen 1 — Clock & Weather**
+Displays time and date synced via NTP, alongside current temperature and weather icons.
+
 ```
          14:35
        Sat 22 Feb
-     22°C  Partly Cloudy
+     22C    [ ICON ]
 ```
+- **Large Temp:** Rounded Celsius temperature displayed in the bottom-left.
+- **Weather Icons:** Custom-drawn icons for Clear (Sun), Cloudy, Rain, Snow, Storm, and Fog.
+- **NTP Sync:** Robust time synchronization with fallback servers.
+
 
 **Screen 2 — Network**
 ```
@@ -241,3 +247,5 @@ platformio.ini    — Build configuration
 **Apple Silicon:** `platformio.ini` pins `espressif/toolchain-riscv32-esp@12.2.0+20230208` — the only ARM64-native RISC-V toolchain version compatible with `framework-arduinoespressif32@3.20017`. The `-march=rv32imc_zicsr_zifencei` build flag is required.
 
 **No float printf:** The Arduino ESP32 framework ships with `CONFIG_NEWLIB_NANO_FORMAT=y`, which removes `%f`/`%e`/`%g` support from printf. Using float format specifiers causes a runtime crash (Guru Meditation / Illegal instruction). Always convert floats to integers before formatting.
+
+**32-bit Time Compliance:** Although `time_t` is 64-bit on newer ESP32 cores, YETI uses `uint32_t` for internal time storage and logic where appropriate to ensure compatibility with 32-bit architectural constraints and standard C-time casting.
