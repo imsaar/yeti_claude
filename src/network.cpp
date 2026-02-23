@@ -110,17 +110,44 @@ button:hover{background:#89c4ff}
 </div>
 </div>
 <script>
-fetch('/api/status').then(r=>r.json()).then(d=>{
-  if(d.ssid)document.getElementById('ssid').value=d.ssid;
-  if(d.lat)document.getElementById('lat').value=d.lat;
-  if(d.lon)document.getElementById('lon').value=d.lon;
-  if(d.tz_sec!==undefined){var s=document.getElementById('tz');for(var o of s.options)if(parseInt(o.value)===d.tz_sec){o.selected=true;break;}}
-  document.getElementById('st').innerHTML=
-    '<span class="badge">WiFi: '+(d.wifi_ok?'&#x2705; Connected':'&#x274C; Offline')+'</span><br>'+
-    '<span class="badge">IP: '+(d.ip||'--')+'</span><br>'+
-    '<span class="badge">'+(parseInt(d.temp_c)||'--')+'&#xB0;C '+( d.weather||'--')+'</span>';
-}).catch(()=>{document.getElementById('st').innerHTML='<span class="err">Status unavailable</span>';});
-document.getElementById('cfg').addEventListener('submit',function(e){var b=e.target.querySelector('button[type=submit]');b.textContent='Saving\u2026';b.disabled=true;});
+function refreshStatus() {
+  const el = document.getElementById('st');
+  if (!el) return;
+  console.log('Fetching status...');
+  fetch('/api/status', { cache: 'no-store' }).then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(d => {
+    console.log('Status received:', d);
+    if (d.ssid) document.getElementById('ssid').value = d.ssid;
+    if (d.lat) document.getElementById('lat').value = d.lat;
+    if (d.lon) document.getElementById('lon').value = d.lon;
+    if (d.tz_sec !== undefined) {
+      const s = document.getElementById('tz');
+      for (let i = 0; i < s.options.length; i++) {
+        if (parseInt(s.options[i].value) === d.tz_sec) {
+          s.selectedIndex = i;
+          break;
+        }
+      }
+    }
+    const tc = (d.temp_c !== undefined && d.temp_c > -90) ? Math.round(d.temp_c) : '--';
+    el.innerHTML = 
+      '<span class="badge">WiFi: ' + (d.wifi_ok ? '&#x2705; Connected' : '&#x274C; Offline') + '</span><br>' +
+      '<span class="badge">IP: ' + (d.ip || '--') + '</span><br>' +
+      '<span class="badge">' + tc + '&#xB0;C ' + (d.weather || '--') + '</span>';
+  }).catch(e => {
+    console.error('Status error:', e);
+    el.innerHTML = '<span class="err">Status unavailable (retrying...)</span>';
+    setTimeout(refreshStatus, 3000);
+  });
+}
+window.addEventListener('load', refreshStatus);
+document.getElementById('cfg').addEventListener('submit', function(e) {
+  const b = e.target.querySelector('button[type=submit]');
+  b.textContent = 'Saving\u2026';
+  b.disabled = true;
+});
 </script>
 </body>
 </html>
@@ -134,8 +161,8 @@ void NetworkManager::begin() {
     _prefs.begin("yeti", false);
     _ssid        = _prefs.getString("ssid", "");
     _pass        = _prefs.getString("pass", "");
-    _lat         = _prefs.getString("lat",  "48.8566");
-    _lon         = _prefs.getString("lon",  "2.3522");
+    _lat         = _prefs.getString("lat",  "48.8566"); _lat.trim();
+    _lon         = _prefs.getString("lon",  "2.3522"); _lon.trim();
     _tzOffsetSec = _prefs.getLong("tz", 0);
 
     if (_ssid.length() == 0) {
@@ -160,7 +187,8 @@ void NetworkManager::update() {
             updateTime();
         }
         // Refresh weather
-        if (_lastWeatherMs == 0 || now - _lastWeatherMs >= WEATHER_INTERVAL_MS) {
+        uint32_t interval = (_tempC < -90) ? 60000UL : WEATHER_INTERVAL_MS; // 1 min retry if no data
+        if (_lastWeatherMs == 0 || now - _lastWeatherMs >= interval) {
             _lastWeatherMs = now;
             fetchWeather();
         }
@@ -224,19 +252,17 @@ void NetworkManager::setupWebServer() {
 }
 
 void NetworkManager::handleRoot() {
+    Serial.printf("[NET] Serving config page to %s\n", _server.client().remoteIP().toString().c_str());
     _server.sendHeader("Cache-Control", "no-cache");
-    // Use chunked transfer so large HTML isn't truncated when TCP window fills
-    _server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-    _server.send(200, "text/html", "");
-    _server.sendContent_P(CONFIG_HTML);
-    _server.sendContent("");   // signal end of chunked body
+    _server.send_P(200, "text/html", CONFIG_HTML);
 }
 
 void NetworkManager::handleSave() {
+    // ... (rest of handleSave remains the same)
     String ssid = _server.arg("ssid");
     String pass = _server.arg("pass");
-    String lat  = _server.arg("lat");
-    String lon  = _server.arg("lon");
+    String lat  = _server.arg("lat"); lat.trim();
+    String lon  = _server.arg("lon"); lon.trim();
     String tz   = _server.arg("tz");
 
     if (ssid.length() == 0) {
@@ -263,6 +289,9 @@ void NetworkManager::handleSave() {
 }
 
 void NetworkManager::handleApiStatus() {
+    uint32_t start = millis();
+    Serial.println("[NET] API Status: Received request");
+    
     JsonDocument doc;
     doc["ssid"]     = _ssid;
     doc["lat"]      = _lat;
@@ -277,9 +306,16 @@ void NetworkManager::handleApiStatus() {
     doc["time"]     = _timeStr;
 
     String out;
-    serializeJson(doc, out);
-    _server.sendHeader("Access-Control-Allow-Origin", "*");
+    if (serializeJson(doc, out) == 0) {
+        Serial.println("[NET] API Status: Serialization failed");
+        _server.send(500, "application/json", "{\"error\":\"serialize failed\"}");
+        return;
+    }
+    
+    _server.sendHeader("Cache-Control", "no-cache");
+    _server.sendHeader("Connection", "close");
     _server.send(200, "application/json", out);
+    Serial.printf("[NET] API Status: Sent in %ums. JSON: %s\n", (uint32_t)(millis() - start), out.c_str());
 }
 
 void NetworkManager::handleSimulate() {
@@ -321,26 +357,37 @@ void NetworkManager::handleNotFound() {
 
 // ─── Weather (Open-Meteo, no API key needed) ──────────────────────────────────
 void NetworkManager::fetchWeather() {
-    if (!_wifiConnected) return;
-    char url[200];
+    if (!_wifiConnected) {
+        Serial.println("[WEATHER] WiFi not connected, skipping fetch.");
+        return;
+    }
+    
+    char url[256];
     snprintf(url, sizeof(url),
-        "http://api.open-meteo.com/v1/forecast"
+        "https://api.open-meteo.com/v1/forecast"
         "?latitude=%s&longitude=%s"
-        "&current=temperature_2m,weathercode"
+        "&current=temperature_2m,weather_code"
         "&forecast_days=1",
         _lat.c_str(), _lon.c_str());
 
+    Serial.printf("[WEATHER] Fetching from: %s\n", url);
+
     HTTPClient http;
+    // For ESP32 HTTPClient, https requires either a root CA or setInsecure()
     http.begin(url);
-    http.setTimeout(8000);
+    http.addHeader("User-Agent", "YETI-Companion/1.0 (esp32-c3; contact:yeti@local)");
+    http.setTimeout(5000); // 5s timeout
     int code = http.GET();
 
     if (code == 200) {
+        String payload = http.getString();
+        Serial.printf("[WEATHER] HTTP 200, Payload: %s\n", payload.c_str());
+        
         JsonDocument doc;
-        auto err = deserializeJson(doc, http.getString());
+        DeserializationError err = deserializeJson(doc, payload);
         if (!err) {
             _tempC = doc["current"]["temperature_2m"] | -99.0f;
-            int wcode = doc["current"]["weathercode"] | 0;
+            int wcode = doc["current"]["weather_code"] | 0;
 
             // Map WMO code → short description
             if      (wcode == 0)                  strncpy(_weatherDesc, "Clear",   sizeof(_weatherDesc));
@@ -352,7 +399,9 @@ void NetworkManager::fetchWeather() {
             else if (wcode <= 99)                 strncpy(_weatherDesc, "Storm",   sizeof(_weatherDesc));
             else                                  strncpy(_weatherDesc, "---",     sizeof(_weatherDesc));
 
-            Serial.printf("[WEATHER] %d°C  %s (code %d)\n", (int)(_tempC + 0.5f), _weatherDesc, wcode);
+            Serial.printf("[WEATHER] Success: %d°C, %s (code %d)\n", (int)(_tempC + 0.5f), _weatherDesc, wcode);
+        } else {
+            Serial.printf("[WEATHER] JSON parse error: %s\n", err.c_str());
         }
     } else {
         Serial.printf("[WEATHER] HTTP error: %d\n", code);
