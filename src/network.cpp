@@ -90,7 +90,13 @@ button:hover{background:#89c4ff}
 </form>
 </div>
 <div class="C">
-<div class="S0"><h2>Status</h2><div id="st">Loading&#x2026;</div></div>
+<div class="S0"><h2>Status</h2>
+<div id="st">
+<span id="st_wifi" class="badge">WiFi: Checking...</span><br>
+<span id="st_ip" class="badge">IP: --</span><br>
+<span id="st_weather" class="badge">--° --</span>
+</div>
+</div>
 <div class="S"><h2>Touch Simulation</h2>
 <div class="SR">
 <form method="POST" action="/api/simulate"><input type="hidden" name="event" value="single"><button type="submit" class="sb">Single Tap</button></form>
@@ -109,6 +115,7 @@ button:hover{background:#89c4ff}
 <form method="POST" action="/api/expression"><input type="hidden" name="expr" value="5"><button type="submit" class="fb">Sleepy</button></form>
 <form method="POST" action="/api/expression"><input type="hidden" name="expr" value="6"><button type="submit" class="fb">Angry</button></form>
 <form method="POST" action="/api/expression"><input type="hidden" name="expr" value="7"><button type="submit" class="fb">Dead</button></form>
+<form method="POST" action="/api/expression"><input type="hidden" name="expr" value="8"><button type="submit" class="fb">Blink</button></form>
 <form method="POST" action="/api/expression"><input type="hidden" name="expr" value="9"><button type="submit" class="fb">Wink L</button></form>
 <form method="POST" action="/api/expression"><input type="hidden" name="expr" value="10"><button type="submit" class="fb">Wink R</button></form>
 </div>
@@ -118,14 +125,10 @@ button:hover{background:#89c4ff}
 </div>
 <script>
 function refreshStatus() {
-  const el = document.getElementById('st');
-  if (!el) return;
-  console.log('Fetching status...');
   fetch('/api/status', { cache: 'no-store' }).then(r => {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   }).then(d => {
-    console.log('Status received:', d);
     if (d.ssid) document.getElementById('ssid').value = d.ssid;
     if (d.lat) document.getElementById('lat').value = d.lat;
     if (d.lon) document.getElementById('lon').value = d.lon;
@@ -133,29 +136,30 @@ function refreshStatus() {
       const s = document.getElementById('tz');
       for (let i = 0; i < s.options.length; i++) {
         if (parseInt(s.options[i].value) === d.tz_sec) {
-          s.selectedIndex = i;
-          break;
+          s.selectedIndex = i; break;
         }
       }
     }
     if (d.faren !== undefined) {
       document.getElementById('faren').value = d.faren ? "1" : "0";
     }
+    
+    document.getElementById('st_wifi').innerHTML = 'WiFi: ' + (d.wifi_ok ? '&#x2705; Connected' : '&#x274C; Offline');
+    document.getElementById('st_ip').innerHTML   = 'IP: ' + (d.ip || '--');
+    
     const tc = (d.temp_c !== undefined && d.temp_c > -90) ? Math.round(d.temp_c) : '--';
     const tf = (tc !== '--') ? Math.round((tc * 9/5) + 32) : '--';
     const dispTemp = d.faren ? tf : tc;
     const unitChar = d.faren ? 'F' : 'C';
-    el.innerHTML = 
-      '<span class="badge">WiFi: ' + (d.wifi_ok ? '&#x2705; Connected' : '&#x274C; Offline') + '</span><br>' +
-      '<span class="badge">IP: ' + (d.ip || '--') + '</span><br>' +
-      '<span class="badge">' + dispTemp + '&#xB0;' + unitChar + ' ' + (d.weather || '--') + '</span>';
+    document.getElementById('st_weather').innerHTML = dispTemp + '&#xB0;' + unitChar + ' ' + (d.weather || '--');
   }).catch(e => {
     console.error('Status error:', e);
-    el.innerHTML = '<span class="err">Status unavailable (retrying...)</span>';
-    setTimeout(refreshStatus, 3000);
   });
 }
-window.addEventListener('load', refreshStatus);
+window.addEventListener('load', () => {
+  refreshStatus();
+  setInterval(refreshStatus, 4000);
+});
 document.getElementById('cfg').addEventListener('submit', function(e) {
   const b = e.target.querySelector('button[type=submit]');
   b.textContent = 'Saving\u2026';
