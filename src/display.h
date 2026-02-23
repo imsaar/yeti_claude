@@ -72,6 +72,15 @@ private:
     void drawXEye(int cx, int cy);
     void drawBrow(int cx, int cy, int8_t brow, bool isLeft);
     void drawMouth(int cx, int cy, int8_t mouth);
+    void drawWeatherIcon(int cx, int cy, const char* desc);
+
+    // ── Icon helpers ────────────────────────────────────────────────────────
+    void drawSun(int cx, int cy);
+    void drawCloud(int cx, int cy);
+    void drawRain(int cx, int cy);
+    void drawSnow(int cx, int cy);
+    void drawStorm(int cx, int cy);
+    void drawFog(int cx, int cy);
 
     // ── Animation helpers ───────────────────────────────────────────────────
     void      updateAnimation();

@@ -1,5 +1,7 @@
 #include <Wire.h>
 #include <Arduino.h>
+#include <math.h>
+#include <string.h>
 #include "display.h"
 
 // ─── Mouth position (below the eyes) ─────────────────────────────────────────
@@ -402,20 +404,27 @@ void DisplayManager::showInfoClock(const char* timeStr, const char* dateStr,
 
     _disp.drawFastHLine(0, 28, OLED_W, SSD1306_WHITE);
 
+    // Date
     _disp.setTextSize(1);
     _disp.getTextBounds(dateStr, 0, 0, &x1, &y1, &w, &h);
     _disp.setCursor((OLED_W - w) / 2, 32);
     _disp.print(dateStr);
 
-    char weatherLine[32];
+    // Large temperature (bottom left)
     if (tempC > -99.0f) {
-        snprintf(weatherLine, sizeof(weatherLine), "%d%cC  %s", (int)(tempC + 0.5f), '\xB0', weatherDesc);
+        char tempStr[10];
+        snprintf(tempStr, sizeof(tempStr), "%dC", (int)(tempC + 0.5f));
+        _disp.setTextSize(3);
+        _disp.setCursor(10, 42);
+        _disp.print(tempStr);
     } else {
-        snprintf(weatherLine, sizeof(weatherLine), "--   %s", weatherDesc);
+        _disp.setTextSize(2);
+        _disp.setCursor(15, 46);
+        _disp.print("--");
     }
-    _disp.getTextBounds(weatherLine, 0, 0, &x1, &y1, &w, &h);
-    _disp.setCursor((OLED_W - w) / 2, 44);
-    _disp.print(weatherLine);
+
+    // Weather icon (bottom right)
+    drawWeatherIcon(95, 52, weatherDesc);
 
     _disp.display();
 }
@@ -481,4 +490,63 @@ uint32_t DisplayManager::randNext() {
     _rng ^= _rng >> 17;
     _rng ^= _rng << 5;
     return _rng;
+}
+
+// ─── Weather Icons ────────────────────────────────────────────────────────────
+void DisplayManager::drawWeatherIcon(int cx, int cy, const char* desc) {
+    if (strcmp(desc, "Clear") == 0)      drawSun(cx, cy);
+    else if (strcmp(desc, "Cloudy") == 0)   drawCloud(cx, cy);
+    else if (strcmp(desc, "Rain") == 0)     drawRain(cx, cy);
+    else if (strcmp(desc, "Showers") == 0)  drawRain(cx, cy);
+    else if (strcmp(desc, "Storm") == 0)    drawStorm(cx, cy);
+    else if (strcmp(desc, "Snow") == 0)     drawSnow(cx, cy);
+    else if (strcmp(desc, "Foggy") == 0)    drawFog(cx, cy);
+    else                                    drawCloud(cx, cy); // default
+}
+
+void DisplayManager::drawSun(int cx, int cy) {
+    _disp.drawCircle(cx, cy, 5, SSD1306_WHITE);
+    for (int i = 0; i < 8; i++) {
+        float angle = i * PI / 4.0;
+        int x1 = cx + cos(angle) * 7;
+        int y1 = cy + sin(angle) * 7;
+        int x2 = cx + cos(angle) * 10;
+        int y2 = cy + sin(angle) * 10;
+        _disp.drawLine(x1, y1, x2, y2, SSD1306_WHITE);
+    }
+}
+
+void DisplayManager::drawCloud(int cx, int cy) {
+    _disp.fillCircle(cx - 4, cy + 2, 4, SSD1306_WHITE);
+    _disp.fillCircle(cx + 4, cy + 2, 4, SSD1306_WHITE);
+    _disp.fillCircle(cx, cy - 2, 5, SSD1306_WHITE);
+    _disp.fillRect(cx - 4, cy + 2, 9, 5, SSD1306_WHITE);
+}
+
+void DisplayManager::drawRain(int cx, int cy) {
+    drawCloud(cx, cy - 3);
+    for (int i = -4; i <= 4; i += 4) {
+        _disp.drawLine(cx + i, cy + 4, cx + i - 1, cy + 8, SSD1306_WHITE);
+    }
+}
+
+void DisplayManager::drawSnow(int cx, int cy) {
+    drawCloud(cx, cy - 3);
+    for (int i = -4; i <= 4; i += 4) {
+        _disp.drawPixel(cx + i, cy + 6, SSD1306_WHITE);
+        _disp.drawPixel(cx + i - 2, cy + 8, SSD1306_WHITE);
+    }
+}
+
+void DisplayManager::drawStorm(int cx, int cy) {
+    drawCloud(cx, cy - 3);
+    _disp.drawLine(cx + 2, cy + 3, cx - 1, cy + 7, SSD1306_WHITE);
+    _disp.drawLine(cx - 1, cy + 7, cx + 1, cy + 7, SSD1306_WHITE);
+    _disp.drawLine(cx + 1, cy + 7, cx - 2, cy + 11, SSD1306_WHITE);
+}
+
+void DisplayManager::drawFog(int cx, int cy) {
+    for (int i = -8; i <= 8; i += 4) {
+        _disp.drawFastHLine(cx - 8, cy + i/2, 16, SSD1306_WHITE);
+    }
 }
