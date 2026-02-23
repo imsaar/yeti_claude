@@ -54,8 +54,8 @@ private:
     bool    _wifiConnected  = false;
     bool    _ntpSynced      = false;
     char    _localIP[20]    = {};
-    char    _timeStr[8]     = "--:--";
-    char    _dateStr[12]    = "---";
+    char    _timeStr[16]    = "--:--";
+    char    _dateStr[32]    = "---";
     float   _tempC          = -99.0f;
     char    _weatherDesc[20]= "---";
 

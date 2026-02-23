@@ -166,9 +166,13 @@ static void handleFaceState(TouchEvent evt) {
 
 // ─── Info mode ────────────────────────────────────────────────────────────────
 static void handleInfoState(TouchEvent evt) {
+    if (evt != TOUCH_NONE) {
+        Serial.printf("[INFO] Touch Event: %d\n", evt);
+    }
     switch (evt) {
         case TOUCH_SINGLE:
             infoScreen = (InfoScreen)((infoScreen + 1) % INFO_COUNT);
+            Serial.printf("[INFO] Switched to screen: %d\n", infoScreen);
             infoEnteredMs     = millis();
             lastInfoRefreshMs = 0;  // force immediate refresh
             break;

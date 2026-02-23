@@ -181,6 +181,12 @@ void NetworkManager::update() {
     uint32_t now = millis();
 
     if (!_apMode && _wifiConnected) {
+        bool connected = (WiFi.status() == WL_CONNECTED);
+        if (!connected) {
+            Serial.println("[NET] WiFi connection lost!");
+            _wifiConnected = false;
+        }
+
         // Sync time every second
         if (now - _lastTimeMs >= 1000) {
             _lastTimeMs = now;
@@ -224,7 +230,7 @@ void NetworkManager::startSTA() {
         strncpy(_localIP, WiFi.localIP().toString().c_str(), sizeof(_localIP) - 1);
         Serial.printf("\n[NET] Connected! IP: %s\n", _localIP);
         setupMDNS();
-        configTime(_tzOffsetSec, 0, NTP_SERVER);
+        configTime(_tzOffsetSec, 0, NTP_SERVER, "time.google.com");
     } else {
         Serial.println("\n[NET] Failed to connect → offline mode");
         _wifiConnected = false;
@@ -411,8 +417,21 @@ void NetworkManager::fetchWeather() {
 
 // ─── NTP time ─────────────────────────────────────────────────────────────────
 void NetworkManager::updateTime() {
+    time_t now;
     struct tm t;
-    if (!getLocalTime(&t, 0)) return;   // 0 ms wait — non-blocking
+    time(&now);
+    localtime_r(&now, &t);
+
+    // If year is < 2000, we probably don't have a real time yet
+    // (tm_year is years since 1900, so 100 = 2000)
+    if (t.tm_year < 100) return;
+
+    if (!_ntpSynced) {
+        Serial.printf("[NET] Time synced: %04d-%02d-%02d %02d:%02d:%02d\n",
+                      t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
+                      t.tm_hour, t.tm_min, t.tm_sec);
+        _ntpSynced = true;
+    }
 
     strftime(_timeStr, sizeof(_timeStr), "%H:%M", &t);
     strftime(_dateStr, sizeof(_dateStr), "%a %d %b", &t);

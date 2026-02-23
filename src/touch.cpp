@@ -2,7 +2,7 @@
 #include "touch.h"
 
 void TouchHandler::begin() {
-    pinMode(TOUCH_PIN, INPUT);
+    pinMode(TOUCH_PIN, INPUT_PULLDOWN);
     _wasPressed    = false;
     _pressStart    = 0;
     _lastReleaseMs = 0;
