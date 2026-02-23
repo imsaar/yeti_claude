@@ -1,0 +1,373 @@
+#include <Arduino.h>
+#include <WiFi.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+#include <Preferences.h>
+#include <time.h>
+#include "network.h"
+
+// ─── Embedded config web page ─────────────────────────────────────────────────
+// Stored in program memory to save RAM
+static const char CONFIG_HTML[] PROGMEM = R"rawhtml(
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YETI Config</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family: system-ui, sans-serif; background:#111; color:#eee;
+         display:flex; justify-content:center; align-items:center; min-height:100vh; }
+  .card { background:#1e1e1e; border-radius:16px; padding:2rem; width:100%;
+          max-width:440px; box-shadow:0 8px 32px #0008; }
+  h1 { font-size:1.6rem; font-weight:700; text-align:center; margin-bottom:1.5rem; }
+  h1 span { color:#6af; }
+  label { display:block; font-size:.8rem; color:#999; margin:1rem 0 .25rem; }
+  input, select {
+    width:100%; padding:.55rem .75rem; background:#2a2a2a; border:1px solid #444;
+    border-radius:8px; color:#eee; font-size:.95rem; outline:none;
+  }
+  input:focus, select:focus { border-color:#6af; }
+  .row { display:flex; gap:.75rem; }
+  .row > div { flex:1; }
+  button {
+    margin-top:1.5rem; width:100%; padding:.75rem; background:#6af;
+    border:none; border-radius:8px; color:#111; font-size:1rem;
+    font-weight:700; cursor:pointer;
+  }
+  button:hover { background:#89c4ff; }
+  .status { margin-top:1rem; font-size:.85rem; text-align:center; color:#8f8; }
+  .err    { color:#f88; }
+  .section { margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid #333; }
+  .section h2 { font-size:1rem; color:#aaa; margin-bottom:.5rem; }
+  .badge { display:inline-block; background:#2a2a2a; border:1px solid #444;
+           border-radius:6px; padding:.2rem .6rem; font-size:.8rem; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>&#x1F9CA; <span>YETI</span> Config</h1>
+
+  <form id="cfg" action="/save" method="POST">
+
+    <div class="section">
+      <h2>WiFi</h2>
+      <label>Network name (SSID)</label>
+      <input name="ssid" id="ssid" type="text" placeholder="MyNetwork" required>
+      <label>Password</label>
+      <input name="pass" id="pass" type="password" placeholder="(leave empty for open)">
+    </div>
+
+    <div class="section">
+      <h2>Location</h2>
+      <div class="row">
+        <div>
+          <label>Latitude</label>
+          <input name="lat" id="lat" type="text" placeholder="48.8566" required>
+        </div>
+        <div>
+          <label>Longitude</label>
+          <input name="lon" id="lon" type="text" placeholder="2.3522" required>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Timezone</h2>
+      <label>UTC offset</label>
+      <select name="tz" id="tz">
+        <option value="-43200">UTC-12</option>
+        <option value="-39600">UTC-11</option>
+        <option value="-36000">UTC-10</option>
+        <option value="-32400">UTC-9</option>
+        <option value="-28800">UTC-8</option>
+        <option value="-25200">UTC-7</option>
+        <option value="-21600">UTC-6</option>
+        <option value="-18000">UTC-5</option>
+        <option value="-14400">UTC-4</option>
+        <option value="-10800">UTC-3</option>
+        <option value="-7200">UTC-2</option>
+        <option value="-3600">UTC-1</option>
+        <option value="0" selected>UTC+0</option>
+        <option value="3600">UTC+1</option>
+        <option value="7200">UTC+2</option>
+        <option value="10800">UTC+3</option>
+        <option value="12600">UTC+3:30</option>
+        <option value="14400">UTC+4</option>
+        <option value="16200">UTC+4:30</option>
+        <option value="18000">UTC+5</option>
+        <option value="19800">UTC+5:30 (IST)</option>
+        <option value="20700">UTC+5:45</option>
+        <option value="21600">UTC+6</option>
+        <option value="23400">UTC+6:30</option>
+        <option value="25200">UTC+7</option>
+        <option value="28800">UTC+8</option>
+        <option value="32400">UTC+9 (JST)</option>
+        <option value="34200">UTC+9:30</option>
+        <option value="36000">UTC+10</option>
+        <option value="39600">UTC+11</option>
+        <option value="43200">UTC+12</option>
+      </select>
+    </div>
+
+    <button type="submit">Save &amp; Reboot</button>
+  </form>
+
+  <div class="section">
+    <h2>Status</h2>
+    <div id="statusBox">Loading…</div>
+  </div>
+</div>
+
+<script>
+// Pre-fill form from API
+fetch('/api/status')
+  .then(r => r.json())
+  .then(d => {
+    if (d.ssid)   document.getElementById('ssid').value = d.ssid;
+    if (d.lat)    document.getElementById('lat').value  = d.lat;
+    if (d.lon)    document.getElementById('lon').value  = d.lon;
+    if (d.tz_sec !== undefined) {
+      let sel = document.getElementById('tz');
+      for (let o of sel.options) {
+        if (parseInt(o.value) === d.tz_sec) { o.selected = true; break; }
+      }
+    }
+    let s = document.getElementById('statusBox');
+    s.innerHTML = `
+      <span class="badge">WiFi: ${d.wifi_ok ? '&#x2705; Connected' : '&#x274C; Offline'}</span>
+      &nbsp;
+      <span class="badge">IP: ${d.ip || '--'}</span>
+      &nbsp;
+      <span class="badge">Temp: ${d.temp_c !== undefined ? d.temp_c.toFixed(1)+'&#xB0;C' : '--'}</span>
+    `;
+  })
+  .catch(() => {
+    document.getElementById('statusBox').innerHTML = '<span class="err">Could not load status</span>';
+  });
+
+// Intercept form to show feedback
+document.getElementById('cfg').addEventListener('submit', e => {
+  let btn = e.target.querySelector('button');
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
+});
+</script>
+</body>
+</html>
+)rawhtml";
+
+// ─── Constructor ──────────────────────────────────────────────────────────────
+NetworkManager::NetworkManager() : _server(80) {}
+
+// ─── begin() ─────────────────────────────────────────────────────────────────
+void NetworkManager::begin() {
+    _prefs.begin("yeti", false);
+    _ssid        = _prefs.getString("ssid", "");
+    _pass        = _prefs.getString("pass", "");
+    _lat         = _prefs.getString("lat",  "48.8566");
+    _lon         = _prefs.getString("lon",  "2.3522");
+    _tzOffsetSec = _prefs.getLong("tz", 0);
+
+    if (_ssid.length() == 0) {
+        // No credentials stored → AP mode
+        startAPMode();
+    } else {
+        startSTA();
+    }
+    setupWebServer();
+}
+
+// ─── update() ────────────────────────────────────────────────────────────────
+void NetworkManager::update() {
+    _server.handleClient();
+
+    uint32_t now = millis();
+
+    if (!_apMode && _wifiConnected) {
+        // Sync time every second
+        if (now - _lastTimeMs >= 1000) {
+            _lastTimeMs = now;
+            updateTime();
+        }
+        // Refresh weather
+        if (_lastWeatherMs == 0 || now - _lastWeatherMs >= WEATHER_INTERVAL_MS) {
+            _lastWeatherMs = now;
+            fetchWeather();
+        }
+    }
+}
+
+// ─── startAPMode() ───────────────────────────────────────────────────────────
+void NetworkManager::startAPMode() {
+    _apMode = true;
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(AP_SSID, AP_PASS);
+    snprintf(_localIP, sizeof(_localIP), "192.168.4.1");
+    Serial.printf("[NET] AP mode: SSID=%s IP=%s\n", AP_SSID, _localIP);
+}
+
+// ─── STA connect ─────────────────────────────────────────────────────────────
+void NetworkManager::startSTA() {
+    _apMode = false;
+    WiFi.mode(WIFI_STA);
+    WiFi.setHostname(HOSTNAME);
+    WiFi.begin(_ssid.c_str(), _pass.c_str());
+
+    Serial.printf("[NET] Connecting to %s …\n", _ssid.c_str());
+
+    uint32_t start = millis();
+    while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
+        delay(300);
+        Serial.print('.');
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+        _wifiConnected = true;
+        strncpy(_localIP, WiFi.localIP().toString().c_str(), sizeof(_localIP) - 1);
+        Serial.printf("\n[NET] Connected! IP: %s\n", _localIP);
+        setupMDNS();
+        configTime(_tzOffsetSec, 0, NTP_SERVER);
+    } else {
+        Serial.println("\n[NET] Failed to connect → offline mode");
+        _wifiConnected = false;
+    }
+}
+
+void NetworkManager::setupMDNS() {
+    if (MDNS.begin(HOSTNAME)) {
+        MDNS.addService("http", "tcp", 80);
+        Serial.printf("[NET] mDNS: http://%s.local\n", HOSTNAME);
+    }
+}
+
+// ─── Web server ───────────────────────────────────────────────────────────────
+void NetworkManager::setupWebServer() {
+    _server.on("/", [this]() { handleRoot(); });
+    _server.on("/save", HTTP_POST, [this]() { handleSave(); });
+    _server.on("/api/status", [this]() { handleApiStatus(); });
+    _server.onNotFound([this]() { handleNotFound(); });
+    _server.begin();
+}
+
+void NetworkManager::handleRoot() {
+    _server.sendHeader("Cache-Control", "no-cache");
+    _server.send_P(200, "text/html", CONFIG_HTML);
+}
+
+void NetworkManager::handleSave() {
+    String ssid = _server.arg("ssid");
+    String pass = _server.arg("pass");
+    String lat  = _server.arg("lat");
+    String lon  = _server.arg("lon");
+    String tz   = _server.arg("tz");
+
+    if (ssid.length() == 0) {
+        _server.send(400, "text/plain", "SSID required");
+        return;
+    }
+
+    _prefs.putString("ssid", ssid);
+    _prefs.putString("pass", pass);
+    _prefs.putString("lat",  lat.length() ? lat : "48.8566");
+    _prefs.putString("lon",  lon.length() ? lon : "2.3522");
+    _prefs.putLong("tz", tz.length() ? tz.toInt() : 0);
+
+    // Serve confirmation then reboot
+    _server.send(200, "text/html",
+        "<html><body style='font-family:system-ui;background:#111;color:#eee;"
+        "display:flex;justify-content:center;align-items:center;height:100vh'>"
+        "<div style='text-align:center'>"
+        "<h2 style='color:#6af'>&#x2705; Saved!</h2>"
+        "<p style='margin-top:1rem'>YETI is rebooting…</p>"
+        "</div></body></html>");
+    delay(1500);
+    ESP.restart();
+}
+
+void NetworkManager::handleApiStatus() {
+    JsonDocument doc;
+    doc["ssid"]     = _ssid;
+    doc["lat"]      = _lat;
+    doc["lon"]      = _lon;
+    doc["tz_sec"]   = _tzOffsetSec;
+    doc["wifi_ok"]  = _wifiConnected;
+    doc["ap_mode"]  = _apMode;
+    doc["ip"]       = _localIP;
+    doc["rssi"]     = _wifiConnected ? WiFi.RSSI() : 0;
+    doc["temp_c"]   = _tempC;
+    doc["weather"]  = _weatherDesc;
+    doc["time"]     = _timeStr;
+
+    String out;
+    serializeJson(doc, out);
+    _server.sendHeader("Access-Control-Allow-Origin", "*");
+    _server.send(200, "application/json", out);
+}
+
+void NetworkManager::handleNotFound() {
+    _server.sendHeader("Location", "/");
+    _server.send(302, "text/plain", "Redirect");
+}
+
+// ─── Weather (Open-Meteo, no API key needed) ──────────────────────────────────
+void NetworkManager::fetchWeather() {
+    if (!_wifiConnected) return;
+    char url[200];
+    snprintf(url, sizeof(url),
+        "http://api.open-meteo.com/v1/forecast"
+        "?latitude=%s&longitude=%s"
+        "&current=temperature_2m,weathercode"
+        "&forecast_days=1",
+        _lat.c_str(), _lon.c_str());
+
+    HTTPClient http;
+    http.begin(url);
+    http.setTimeout(8000);
+    int code = http.GET();
+
+    if (code == 200) {
+        JsonDocument doc;
+        auto err = deserializeJson(doc, http.getString());
+        if (!err) {
+            _tempC = doc["current"]["temperature_2m"] | -99.0f;
+            int wcode = doc["current"]["weathercode"] | 0;
+
+            // Map WMO code → short description
+            if      (wcode == 0)                  strncpy(_weatherDesc, "Clear",   sizeof(_weatherDesc));
+            else if (wcode <= 3)                  strncpy(_weatherDesc, "Cloudy",  sizeof(_weatherDesc));
+            else if (wcode <= 48)                 strncpy(_weatherDesc, "Foggy",   sizeof(_weatherDesc));
+            else if (wcode <= 67)                 strncpy(_weatherDesc, "Rain",    sizeof(_weatherDesc));
+            else if (wcode <= 77)                 strncpy(_weatherDesc, "Snow",    sizeof(_weatherDesc));
+            else if (wcode <= 82)                 strncpy(_weatherDesc, "Showers", sizeof(_weatherDesc));
+            else if (wcode <= 99)                 strncpy(_weatherDesc, "Storm",   sizeof(_weatherDesc));
+            else                                  strncpy(_weatherDesc, "---",     sizeof(_weatherDesc));
+
+            Serial.printf("[WEATHER] %d°C  %s (code %d)\n", (int)(_tempC + 0.5f), _weatherDesc, wcode);
+        }
+    } else {
+        Serial.printf("[WEATHER] HTTP error: %d\n", code);
+    }
+    http.end();
+}
+
+// ─── NTP time ─────────────────────────────────────────────────────────────────
+void NetworkManager::updateTime() {
+    struct tm t;
+    if (!getLocalTime(&t, 0)) return;   // 0 ms wait — non-blocking
+
+    strftime(_timeStr, sizeof(_timeStr), "%H:%M", &t);
+    strftime(_dateStr, sizeof(_dateStr), "%a %d %b", &t);
+}
+
+// ─── Getters ──────────────────────────────────────────────────────────────────
+bool NetworkManager::isConnected() const {
+    return _wifiConnected && (WiFi.status() == WL_CONNECTED);
+}
+
+int NetworkManager::getRSSI() const {
+    return _wifiConnected ? WiFi.RSSI() : 0;
+}
