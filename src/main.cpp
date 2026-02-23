@@ -58,8 +58,10 @@ void setup() {
 
 // ─── loop() ──────────────────────────────────────────────────────────────────
 void loop() {
-    // Always service display animations and web server
-    disp.update();
+    // Service display animations (only in face mode) and web server
+    if (appState == STATE_FACE) {
+        disp.update();
+    }
     net.update();
 
     TouchEvent evt = touch.poll();
