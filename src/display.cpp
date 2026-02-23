@@ -24,8 +24,8 @@ const FaceParams FACE_DATA[EXPR_COUNT] = {
     // EXPR_HAPPY  – squinted eyes, big smile
     { {5, 0,  0,  3, 0}, {5, 0,  0,  3, 0},  0,  10 },
 
-    // EXPR_NEUTRAL – slight top lid, no mouth
-    { {3, 0,  0,  0, 0}, {3, 0,  0,  0, 0},  0,   0 },
+    // EXPR_NEUTRAL – slight top lid, flat mouth
+    { {3, 0,  0,  0, 0}, {3, 0,  0,  0, 0},  0,   1 },
 
     // EXPR_SAD – raised lower lid, pupils up, sad brows, frown
     { {0, 8,  0, -4, 0}, {0, 8,  0, -4, 0},  9,  -9 },
