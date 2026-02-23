@@ -417,9 +417,9 @@ void NetworkManager::fetchWeather() {
 
 // ─── NTP time ─────────────────────────────────────────────────────────────────
 void NetworkManager::updateTime() {
-    time_t now;
+    uint32_t now32 = (uint32_t)time(NULL);
     struct tm t;
-    time(&now);
+    time_t now = (time_t)now32;
     localtime_r(&now, &t);
 
     // If year is < 2000, we probably don't have a real time yet
