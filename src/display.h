@@ -38,7 +38,8 @@ public:
     void showSetupScreen(const char* ssid, const char* ip);
     void showSleepScreen();
     void showInfoClock(const char* timeStr, const char* dateStr,
-                       float tempC, const char* weatherDesc);
+                       float tempC, const char* weatherDesc,
+                       bool useFahrenheit = true);
     void showInfoNetwork(bool wifiOk, const char* ip, int rssi, bool apMode);
     void showInfoFirmware(uint32_t uptimeSec);
 

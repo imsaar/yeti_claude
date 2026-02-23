@@ -39,6 +39,7 @@ public:
     const char* getDateStr()   const { return _dateStr;     }
     float       getTemperature() const { return _tempC;     }
     const char* getWeatherDesc() const { return _weatherDesc; }
+    bool        useFahrenheit()  const { return _useFahrenheit; }
 
     // ── Simulation ──────────────────────────────────────────────────────────
     // Returns any pending simulated touch event and clears it (call each loop)
@@ -58,6 +59,7 @@ private:
     char    _dateStr[32]    = "---";
     float   _tempC          = -99.0f;
     char    _weatherDesc[20]= "---";
+    bool    _useFahrenheit  = true;
 
     // Config stored in Preferences
     String  _ssid;

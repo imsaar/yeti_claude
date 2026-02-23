@@ -79,6 +79,13 @@ button:hover{background:#89c4ff}
 <option value="43200">UTC+12</option>
 </select>
 </div>
+<div class="S"><h2>Units</h2>
+<label>Temperature Unit</label>
+<select name="faren" id="faren">
+<option value="1" selected>Fahrenheit (°F)</option>
+<option value="0">Celsius (°C)</option>
+</select>
+</div>
 <button type="submit">Save &amp; Reboot</button>
 </form>
 </div>
@@ -131,11 +138,17 @@ function refreshStatus() {
         }
       }
     }
+    if (d.faren !== undefined) {
+      document.getElementById('faren').value = d.faren ? "1" : "0";
+    }
     const tc = (d.temp_c !== undefined && d.temp_c > -90) ? Math.round(d.temp_c) : '--';
+    const tf = (tc !== '--') ? Math.round((tc * 9/5) + 32) : '--';
+    const dispTemp = d.faren ? tf : tc;
+    const unitChar = d.faren ? 'F' : 'C';
     el.innerHTML = 
       '<span class="badge">WiFi: ' + (d.wifi_ok ? '&#x2705; Connected' : '&#x274C; Offline') + '</span><br>' +
       '<span class="badge">IP: ' + (d.ip || '--') + '</span><br>' +
-      '<span class="badge">' + tc + '&#xB0;C ' + (d.weather || '--') + '</span>';
+      '<span class="badge">' + dispTemp + '&#xB0;' + unitChar + ' ' + (d.weather || '--') + '</span>';
   }).catch(e => {
     console.error('Status error:', e);
     el.innerHTML = '<span class="err">Status unavailable (retrying...)</span>';
@@ -164,6 +177,7 @@ void NetworkManager::begin() {
     _lat         = _prefs.getString("lat",  "48.8566"); _lat.trim();
     _lon         = _prefs.getString("lon",  "2.3522"); _lon.trim();
     _tzOffsetSec = _prefs.getLong("tz", 0);
+    _useFahrenheit = _prefs.getBool("faren", true);
 
     if (_ssid.length() == 0) {
         // No credentials stored → AP mode
@@ -270,6 +284,7 @@ void NetworkManager::handleSave() {
     String lat  = _server.arg("lat"); lat.trim();
     String lon  = _server.arg("lon"); lon.trim();
     String tz   = _server.arg("tz");
+    String faren= _server.arg("faren");
 
     if (ssid.length() == 0) {
         _server.send(400, "text/plain", "SSID required");
@@ -281,6 +296,7 @@ void NetworkManager::handleSave() {
     _prefs.putString("lat",  lat.length() ? lat : "48.8566");
     _prefs.putString("lon",  lon.length() ? lon : "2.3522");
     _prefs.putLong("tz", tz.length() ? tz.toInt() : 0);
+    _prefs.putBool("faren", faren == "1");
 
     // Serve confirmation then reboot
     _server.send(200, "text/html",
@@ -303,6 +319,7 @@ void NetworkManager::handleApiStatus() {
     doc["lat"]      = _lat;
     doc["lon"]      = _lon;
     doc["tz_sec"]   = _tzOffsetSec;
+    doc["faren"]    = _useFahrenheit;
     doc["wifi_ok"]  = _wifiConnected;
     doc["ap_mode"]  = _apMode;
     doc["ip"]       = _localIP;

@@ -391,7 +391,8 @@ void DisplayManager::showSleepScreen() {
 }
 
 void DisplayManager::showInfoClock(const char* timeStr, const char* dateStr,
-                                   float tempC, const char* weatherDesc) {
+                                   float tempC, const char* weatherDesc,
+                                   bool useFahrenheit) {
     _disp.clearDisplay();
     _disp.setTextColor(SSD1306_WHITE);
 
@@ -413,7 +414,12 @@ void DisplayManager::showInfoClock(const char* timeStr, const char* dateStr,
     // Large temperature (bottom left)
     if (tempC > -99.0f) {
         char tempStr[10];
-        snprintf(tempStr, sizeof(tempStr), "%dC", (int)(tempC + 0.5f));
+        if (useFahrenheit) {
+            int tempF = (int)((tempC * 9.0f / 5.0f) + 32.5f);
+            snprintf(tempStr, sizeof(tempStr), "%dF", tempF);
+        } else {
+            snprintf(tempStr, sizeof(tempStr), "%dC", (int)(tempC + 0.5f));
+        }
         _disp.setTextSize(3);
         _disp.setCursor(10, 42);
         _disp.print(tempStr);

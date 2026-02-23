@@ -213,7 +213,8 @@ static void refreshInfoDisplay() {
     switch (infoScreen) {
         case INFO_CLOCK:
             disp.showInfoClock(net.getTimeStr(), net.getDateStr(),
-                               net.getTemperature(), net.getWeatherDesc());
+                               net.getTemperature(), net.getWeatherDesc(),
+                               net.useFahrenheit());
             break;
         case INFO_NETWORK:
             disp.showInfoNetwork(net.isConnected(), net.getLocalIP(),
