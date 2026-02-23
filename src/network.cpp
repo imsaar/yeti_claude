@@ -14,147 +14,113 @@ static const char CONFIG_HTML[] PROGMEM = R"rawhtml(
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>YETI Config</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YETI</title>
 <style>
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family: system-ui, sans-serif; background:#111; color:#eee;
-         display:flex; justify-content:center; align-items:center; min-height:100vh; }
-  .card { background:#1e1e1e; border-radius:16px; padding:2rem; width:100%;
-          max-width:440px; box-shadow:0 8px 32px #0008; }
-  h1 { font-size:1.6rem; font-weight:700; text-align:center; margin-bottom:1.5rem; }
-  h1 span { color:#6af; }
-  label { display:block; font-size:.8rem; color:#999; margin:1rem 0 .25rem; }
-  input, select {
-    width:100%; padding:.55rem .75rem; background:#2a2a2a; border:1px solid #444;
-    border-radius:8px; color:#eee; font-size:.95rem; outline:none;
-  }
-  input:focus, select:focus { border-color:#6af; }
-  .row { display:flex; gap:.75rem; }
-  .row > div { flex:1; }
-  button {
-    margin-top:1.5rem; width:100%; padding:.75rem; background:#6af;
-    border:none; border-radius:8px; color:#111; font-size:1rem;
-    font-weight:700; cursor:pointer;
-  }
-  button:hover { background:#89c4ff; }
-  .status { margin-top:1rem; font-size:.85rem; text-align:center; color:#8f8; }
-  .err    { color:#f88; }
-  .section { margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid #333; }
-  .section h2 { font-size:1rem; color:#aaa; margin-bottom:.5rem; }
-  .badge { display:inline-block; background:#2a2a2a; border:1px solid #444;
-           border-radius:6px; padding:.2rem .6rem; font-size:.8rem; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#111;color:#eee;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:1.5rem 1rem}
+.W{background:#1e1e1e;border-radius:16px;padding:2rem;width:100%;max-width:820px;box-shadow:0 8px 32px #0008}
+h1{font-size:1.6rem;font-weight:700;text-align:center;margin-bottom:1.5rem}
+h1 span{color:#6af}
+label{display:block;font-size:.8rem;color:#999;margin:1rem 0 .25rem}
+input,select{width:100%;padding:.55rem .75rem;background:#2a2a2a;border:1px solid #444;border-radius:8px;color:#eee;font-size:.95rem;outline:none}
+input:focus,select:focus{border-color:#6af}
+.R{display:flex;gap:.75rem}.R>div{flex:1}
+.G{display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:start}
+.C{border-left:1px solid #333;padding-left:2rem}
+@media(max-width:580px){.G{grid-template-columns:1fr}.C{border-left:none;padding-left:0;border-top:1px solid #333;padding-top:1.5rem;margin-top:1.5rem}}
+button{margin-top:1.5rem;width:100%;padding:.7rem;background:#6af;border:none;border-radius:8px;color:#111;font-size:1rem;font-weight:700;cursor:pointer}
+button:hover{background:#89c4ff}
+.err{color:#f88}
+.S{margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid #333}
+.S0{margin-top:0;padding-top:0;border-top:none}
+.S h2,.S0 h2{font-size:1rem;color:#aaa;margin-bottom:.5rem}
+.badge{display:inline-block;background:#2a2a2a;border:1px solid #444;border-radius:6px;padding:.25rem .6rem;font-size:.8rem;margin:.15rem 0}
+.SR{display:flex;gap:.5rem;margin-top:.5rem}.SR>form{flex:1}
+.sb{margin-top:0;width:100%;padding:.6rem .25rem;background:#2a2a2a;border:1px solid #555;color:#eee;font-size:.85rem;font-weight:600}
+.sb:hover{background:#3a3a3a}
+.FG{display:grid;grid-template-columns:repeat(5,1fr);gap:.35rem;margin-top:.5rem}
+.fb{margin-top:0;width:100%;padding:.45rem .1rem;font-size:.7rem;background:#2a2a2a;border:1px solid #555;color:#eee;font-weight:600;border-radius:8px;cursor:pointer}
+.fb:hover{background:#3a3a3a}
+.ht{font-size:.75rem;color:#666;margin-top:.35rem}
 </style>
 </head>
 <body>
-<div class="card">
-  <h1>&#x1F9CA; <span>YETI</span> Config</h1>
-
-  <form id="cfg" action="/save" method="POST">
-
-    <div class="section">
-      <h2>WiFi</h2>
-      <label>Network name (SSID)</label>
-      <input name="ssid" id="ssid" type="text" placeholder="MyNetwork" required>
-      <label>Password</label>
-      <input name="pass" id="pass" type="password" placeholder="(leave empty for open)">
-    </div>
-
-    <div class="section">
-      <h2>Location</h2>
-      <div class="row">
-        <div>
-          <label>Latitude</label>
-          <input name="lat" id="lat" type="text" placeholder="48.8566" required>
-        </div>
-        <div>
-          <label>Longitude</label>
-          <input name="lon" id="lon" type="text" placeholder="2.3522" required>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Timezone</h2>
-      <label>UTC offset</label>
-      <select name="tz" id="tz">
-        <option value="-43200">UTC-12</option>
-        <option value="-39600">UTC-11</option>
-        <option value="-36000">UTC-10</option>
-        <option value="-32400">UTC-9</option>
-        <option value="-28800">UTC-8</option>
-        <option value="-25200">UTC-7</option>
-        <option value="-21600">UTC-6</option>
-        <option value="-18000">UTC-5</option>
-        <option value="-14400">UTC-4</option>
-        <option value="-10800">UTC-3</option>
-        <option value="-7200">UTC-2</option>
-        <option value="-3600">UTC-1</option>
-        <option value="0" selected>UTC+0</option>
-        <option value="3600">UTC+1</option>
-        <option value="7200">UTC+2</option>
-        <option value="10800">UTC+3</option>
-        <option value="12600">UTC+3:30</option>
-        <option value="14400">UTC+4</option>
-        <option value="16200">UTC+4:30</option>
-        <option value="18000">UTC+5</option>
-        <option value="19800">UTC+5:30 (IST)</option>
-        <option value="20700">UTC+5:45</option>
-        <option value="21600">UTC+6</option>
-        <option value="23400">UTC+6:30</option>
-        <option value="25200">UTC+7</option>
-        <option value="28800">UTC+8</option>
-        <option value="32400">UTC+9 (JST)</option>
-        <option value="34200">UTC+9:30</option>
-        <option value="36000">UTC+10</option>
-        <option value="39600">UTC+11</option>
-        <option value="43200">UTC+12</option>
-      </select>
-    </div>
-
-    <button type="submit">Save &amp; Reboot</button>
-  </form>
-
-  <div class="section">
-    <h2>Status</h2>
-    <div id="statusBox">Loading…</div>
-  </div>
+<div class="W">
+<h1>&#x1F9CA; <span>YETI</span> Config</h1>
+<div class="G">
+<div style="padding-right:2rem">
+<form id="cfg" action="/save" method="POST">
+<div class="S0"><h2>WiFi</h2>
+<label>SSID</label><input name="ssid" id="ssid" type="text" placeholder="MyNetwork" required>
+<label>Password</label><input name="pass" id="pass" type="password" placeholder="(open if empty)">
 </div>
-
+<div class="S"><h2>Location</h2>
+<div class="R"><div><label>Latitude</label><input name="lat" id="lat" type="text" placeholder="48.8566" required></div>
+<div><label>Longitude</label><input name="lon" id="lon" type="text" placeholder="2.3522" required></div></div>
+</div>
+<div class="S"><h2>Timezone</h2>
+<select name="tz" id="tz">
+<option value="-43200">UTC-12</option><option value="-39600">UTC-11</option>
+<option value="-36000">UTC-10</option><option value="-32400">UTC-9</option>
+<option value="-28800">UTC-8</option><option value="-25200">UTC-7</option>
+<option value="-21600">UTC-6</option><option value="-18000">UTC-5</option>
+<option value="-14400">UTC-4</option><option value="-10800">UTC-3</option>
+<option value="-7200">UTC-2</option><option value="-3600">UTC-1</option>
+<option value="0" selected>UTC+0</option><option value="3600">UTC+1</option>
+<option value="7200">UTC+2</option><option value="10800">UTC+3</option>
+<option value="12600">UTC+3:30</option><option value="14400">UTC+4</option>
+<option value="16200">UTC+4:30</option><option value="18000">UTC+5</option>
+<option value="19800">UTC+5:30 (IST)</option><option value="20700">UTC+5:45</option>
+<option value="21600">UTC+6</option><option value="23400">UTC+6:30</option>
+<option value="25200">UTC+7</option><option value="28800">UTC+8</option>
+<option value="32400">UTC+9 (JST)</option><option value="34200">UTC+9:30</option>
+<option value="36000">UTC+10</option><option value="39600">UTC+11</option>
+<option value="43200">UTC+12</option>
+</select>
+</div>
+<button type="submit">Save &amp; Reboot</button>
+</form>
+</div>
+<div class="C">
+<div class="S0"><h2>Status</h2><div id="st">Loading&#x2026;</div></div>
+<div class="S"><h2>Touch Simulation</h2>
+<div class="SR">
+<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="single"><button type="submit" class="sb">Single Tap</button></form>
+<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="double"><button type="submit" class="sb">Double Tap</button></form>
+<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="long"><button type="submit" class="sb">Long Press</button></form>
+</div>
+<p class="ht">Single=next expr &#x2022; Double=info &#x2022; Long=love</p>
+</div>
+<div class="S"><h2>Expression</h2>
+<div class="FG">
+<form method="POST" action="/api/expression"><input type="hidden" name="expr" value="0"><button type="submit" class="fb">Happy</button></form>
+<form method="POST" action="/api/expression"><input type="hidden" name="expr" value="1"><button type="submit" class="fb">Neutral</button></form>
+<form method="POST" action="/api/expression"><input type="hidden" name="expr" value="2"><button type="submit" class="fb">Sad</button></form>
+<form method="POST" action="/api/expression"><input type="hidden" name="expr" value="3"><button type="submit" class="fb">Surprised</button></form>
+<form method="POST" action="/api/expression"><input type="hidden" name="expr" value="4"><button type="submit" class="fb">Love</button></form>
+<form method="POST" action="/api/expression"><input type="hidden" name="expr" value="5"><button type="submit" class="fb">Sleepy</button></form>
+<form method="POST" action="/api/expression"><input type="hidden" name="expr" value="6"><button type="submit" class="fb">Angry</button></form>
+<form method="POST" action="/api/expression"><input type="hidden" name="expr" value="7"><button type="submit" class="fb">Dead</button></form>
+<form method="POST" action="/api/expression"><input type="hidden" name="expr" value="9"><button type="submit" class="fb">Wink L</button></form>
+<form method="POST" action="/api/expression"><input type="hidden" name="expr" value="10"><button type="submit" class="fb">Wink R</button></form>
+</div>
+</div>
+</div>
+</div>
+</div>
 <script>
-// Pre-fill form from API
-fetch('/api/status')
-  .then(r => r.json())
-  .then(d => {
-    if (d.ssid)   document.getElementById('ssid').value = d.ssid;
-    if (d.lat)    document.getElementById('lat').value  = d.lat;
-    if (d.lon)    document.getElementById('lon').value  = d.lon;
-    if (d.tz_sec !== undefined) {
-      let sel = document.getElementById('tz');
-      for (let o of sel.options) {
-        if (parseInt(o.value) === d.tz_sec) { o.selected = true; break; }
-      }
-    }
-    let s = document.getElementById('statusBox');
-    s.innerHTML = `
-      <span class="badge">WiFi: ${d.wifi_ok ? '&#x2705; Connected' : '&#x274C; Offline'}</span>
-      &nbsp;
-      <span class="badge">IP: ${d.ip || '--'}</span>
-      &nbsp;
-      <span class="badge">Temp: ${d.temp_c !== undefined ? d.temp_c.toFixed(1)+'&#xB0;C' : '--'}</span>
-    `;
-  })
-  .catch(() => {
-    document.getElementById('statusBox').innerHTML = '<span class="err">Could not load status</span>';
-  });
-
-// Intercept form to show feedback
-document.getElementById('cfg').addEventListener('submit', e => {
-  let btn = e.target.querySelector('button');
-  btn.textContent = 'Saving…';
-  btn.disabled = true;
-});
+fetch('/api/status').then(r=>r.json()).then(d=>{
+  if(d.ssid)document.getElementById('ssid').value=d.ssid;
+  if(d.lat)document.getElementById('lat').value=d.lat;
+  if(d.lon)document.getElementById('lon').value=d.lon;
+  if(d.tz_sec!==undefined){var s=document.getElementById('tz');for(var o of s.options)if(parseInt(o.value)===d.tz_sec){o.selected=true;break;}}
+  document.getElementById('st').innerHTML=
+    '<span class="badge">WiFi: '+(d.wifi_ok?'&#x2705; Connected':'&#x274C; Offline')+'</span><br>'+
+    '<span class="badge">IP: '+(d.ip||'--')+'</span><br>'+
+    '<span class="badge">'+(parseInt(d.temp_c)||'--')+'&#xB0;C '+( d.weather||'--')+'</span>';
+}).catch(()=>{document.getElementById('st').innerHTML='<span class="err">Status unavailable</span>';});
+document.getElementById('cfg').addEventListener('submit',function(e){var b=e.target.querySelector('button[type=submit]');b.textContent='Saving\u2026';b.disabled=true;});
 </script>
 </body>
 </html>
@@ -246,16 +212,24 @@ void NetworkManager::setupMDNS() {
 
 // ─── Web server ───────────────────────────────────────────────────────────────
 void NetworkManager::setupWebServer() {
-    _server.on("/", [this]() { handleRoot(); });
-    _server.on("/save", HTTP_POST, [this]() { handleSave(); });
-    _server.on("/api/status", [this]() { handleApiStatus(); });
+    _server.on("/",              [this]() { handleRoot(); });      // HTTP_ANY — captive portal compat
+    _server.on("/save",          HTTP_POST, [this]() { handleSave(); });
+    _server.on("/api/status",    [this]() { handleApiStatus(); }); // HTTP_ANY
+    _server.on("/api/simulate",  HTTP_POST, [this]() { handleSimulate(); });
+    _server.on("/api/expression",HTTP_POST, [this]() { handleApiExpression(); });
+    // Silence the common browser auto-request so it doesn't pollute the log
+    _server.on("/favicon.ico",   HTTP_GET,  [this]() { _server.send(204, "text/plain", ""); });
     _server.onNotFound([this]() { handleNotFound(); });
     _server.begin();
 }
 
 void NetworkManager::handleRoot() {
     _server.sendHeader("Cache-Control", "no-cache");
-    _server.send_P(200, "text/html", CONFIG_HTML);
+    // Use chunked transfer so large HTML isn't truncated when TCP window fills
+    _server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+    _server.send(200, "text/html", "");
+    _server.sendContent_P(CONFIG_HTML);
+    _server.sendContent("");   // signal end of chunked body
 }
 
 void NetworkManager::handleSave() {
@@ -306,6 +280,38 @@ void NetworkManager::handleApiStatus() {
     serializeJson(doc, out);
     _server.sendHeader("Access-Control-Allow-Origin", "*");
     _server.send(200, "application/json", out);
+}
+
+void NetworkManager::handleSimulate() {
+    String evt = _server.arg("event");
+    if      (evt == "single") _simulatedEvent = TOUCH_SINGLE;
+    else if (evt == "double") _simulatedEvent = TOUCH_DOUBLE;
+    else if (evt == "long")   _simulatedEvent = TOUCH_LONG;
+    _server.sendHeader("Location", "/");
+    _server.send(302, "text/plain", "");
+}
+
+void NetworkManager::handleApiExpression() {
+    if (_server.hasArg("expr")) {
+        int expr = _server.arg("expr").toInt();
+        if (expr >= 0 && expr < EXPR_COUNT && expr != EXPR_BLINK) {
+            _pendingExpression = (int8_t)expr;
+        }
+    }
+    _server.sendHeader("Location", "/");
+    _server.send(302, "text/plain", "");
+}
+
+TouchEvent NetworkManager::consumeSimulatedEvent() {
+    TouchEvent e = _simulatedEvent;
+    _simulatedEvent = TOUCH_NONE;
+    return e;
+}
+
+int8_t NetworkManager::consumePendingExpression() {
+    int8_t e = _pendingExpression;
+    _pendingExpression = -1;
+    return e;
 }
 
 void NetworkManager::handleNotFound() {

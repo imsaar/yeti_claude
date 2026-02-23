@@ -63,6 +63,25 @@ void loop() {
     net.update();
 
     TouchEvent evt = touch.poll();
+    // Merge any event injected via the web UI simulation panel
+    { TouchEvent sim = net.consumeSimulatedEvent(); if (sim != TOUCH_NONE) evt = sim; }
+
+    // Apply any expression set directly from the web UI
+    {
+        int8_t pe = net.consumePendingExpression();
+        if (pe >= 0) {
+            Expression expr = (Expression)pe;
+            disp.transitionTo(expr);
+            loveReturning = false;
+            lastCycleMs = millis();
+            lastInteraction = millis();
+            // Sync cycleIdx so single-tap continues from this expression
+            for (uint8_t i = 0; i < CYCLE_COUNT; i++) {
+                if (CYCLE_EXPRS[i] == expr) { cycleIdx = i; break; }
+            }
+            if (appState != STATE_FACE) enterFaceMode();
+        }
+    }
 
     // Any touch resets idle / wakes from sleep
     if (evt != TOUCH_NONE) {

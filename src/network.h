@@ -40,6 +40,12 @@ public:
     float       getTemperature() const { return _tempC;     }
     const char* getWeatherDesc() const { return _weatherDesc; }
 
+    // ── Simulation ──────────────────────────────────────────────────────────
+    // Returns any pending simulated touch event and clears it (call each loop)
+    TouchEvent  consumeSimulatedEvent();
+    // Returns a pending expression set via the web UI (-1 = none)
+    int8_t      consumePendingExpression();
+
 private:
     Preferences  _prefs;
     WebServer    _server;
@@ -60,8 +66,10 @@ private:
     String  _lon;
     int32_t _tzOffsetSec    = 0;
 
-    uint32_t _lastWeatherMs = 0;
-    uint32_t _lastTimeMs    = 0;
+    uint32_t   _lastWeatherMs   = 0;
+    uint32_t   _lastTimeMs      = 0;
+    TouchEvent _simulatedEvent  = TOUCH_NONE;
+    int8_t     _pendingExpression = -1;
 
     void connectWiFi();
     void startSTA();
@@ -74,6 +82,7 @@ private:
     void handleRoot();
     void handleSave();
     void handleApiStatus();
+    void handleSimulate();
     void handleApiExpression();
     void handleNotFound();
 };
