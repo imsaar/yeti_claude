@@ -10,9 +10,9 @@ The enclosure is the [Compagnon 309 by Leroyd](https://makerworld.com) on MakerW
 
 - **Animated face** — 11 expressions (happy, sad, angry, surprised, love, sleepy, dead, wink, and more) rendered geometrically with smooth blink transitions
 - **Touch gestures** — single tap cycles expressions, double tap opens info screens, long press triggers a love expression
-- **Live weather** — fetches current temperature and conditions from [Open-Meteo](https://open-meteo.com) (free, no API key)
+- **Live weather** — fetches current temperature and conditions from [Open-Meteo](https://open-meteo.com) (free, no API key). Support for **Fahrenheit or Celsius**.
 - **NTP clock** — syncs time on boot, configurable UTC offset
-- **Local web UI** — configure WiFi, location, and timezone at `http://yeti.local`
+- **Local web UI** — configure WiFi, location, timezone, and units at `http://yeti.local`
 - **Offline mode** — full gesture and expression support even without WiFi
 - **Sleep mode** — blanks display after 5 minutes idle, wakes on touch
 
@@ -103,7 +103,7 @@ On first boot (no WiFi credentials stored), YETI starts an open access point:
 
 1. **SSID:** `YETI Setup` — connect from any phone or laptop
 2. Open a browser to `http://192.168.4.1`
-3. Fill in WiFi SSID, password, latitude, longitude, and UTC offset
+3. Fill in WiFi SSID, password, latitude, longitude, timezone, and **temperature unit** (F/C)
 4. Click **Save** — YETI writes the config to non-volatile storage and reboots
 
 ### Normal Operation
@@ -153,9 +153,9 @@ Displays time and date synced via NTP, alongside current temperature and weather
 ```
          14:35
        Sat 22 Feb
-     22C    [ ICON ]
+     72F    [ ICON ]
 ```
-- **Large Temp:** Rounded Celsius temperature displayed in the bottom-left.
+- **Large Temp:** Rounded Fahrenheit or Celsius temperature displayed in the bottom-left (configurable).
 - **Weather Icons:** Custom-drawn icons for Clear (Sun), Cloudy, Rain, Snow, Storm, and Fog.
 - **NTP Sync:** Robust time synchronization with fallback servers.
 
@@ -190,7 +190,7 @@ Info mode auto-exits to face mode after 30 seconds of no interaction.
 |---|---|---|
 | `/` | GET | Config page (pre-filled from current settings) |
 | `/save` | POST | Save settings to NVS and reboot |
-| `/api/status` | GET | JSON with WiFi status, IP, RSSI, temp, weather, time, and stored coordinates |
+| `/api/status` | GET | JSON with WiFi status, IP, RSSI, temp, weather, time, unit preference (`faren`), and stored coordinates |
 
 ---
 
