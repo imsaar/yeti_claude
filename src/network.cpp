@@ -96,43 +96,41 @@ void NetworkManager::setupWebServer() {
 
 void NetworkManager::handleRoot() {
     String html;
-    html.reserve(6144);
+    html.reserve(8192);
     html += R"rawhtml(<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="10">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>YETI</title><style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,sans-serif;background:#111;color:#eee;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:1.5rem 1rem}
+body{font-family:system-ui,sans-serif;background:#111;color:#eee;display:flex;justify-content:center;padding:1.5rem 1rem}
 .W{background:#1e1e1e;border-radius:16px;padding:2rem;width:100%;max-width:820px;box-shadow:0 8px 32px #0008}
-h1{font-size:1.6rem;font-weight:700;text-align:center;margin-bottom:1.5rem}
+h1{font-size:1.6rem;text-align:center;margin-bottom:1.5rem}
 h1 span{color:#6af}
 label{display:block;font-size:.8rem;color:#999;margin:1rem 0 .25rem}
-input,select{width:100%;padding:.55rem .75rem;background:#2a2a2a;border:1px solid #444;border-radius:8px;color:#eee;font-size:.95rem;outline:none}
+input,select{width:100%;padding:.55rem .75rem;background:#2a2a2a;border:1px solid #444;border-radius:8px;color:#eee;outline:none}
 input:focus,select:focus{border-color:#6af}
 .R{display:flex;gap:.75rem}.R>div{flex:1}
-.G{display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:start}
+.G{display:grid;grid-template-columns:1fr 1fr;gap:0}
 .C{border-left:1px solid #333;padding-left:2rem}
-@media(max-width:580px){.G{grid-template-columns:1fr}.C{border-left:none;padding-left:0;border-top:1px solid #333;padding-top:1.5rem;margin-top:1.5rem}}
+@media(max-width:580px){.G{grid-template-columns:1fr}.C{border-left:none;padding-top:1.5rem;margin-top:1.5rem;border-top:1px solid #333}}
 button{margin-top:1.5rem;width:100%;padding:.7rem;background:#6af;border:none;border-radius:8px;color:#111;font-size:1rem;font-weight:700;cursor:pointer}
-button:hover{background:#89c4ff}
 .S{margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid #333}
-.S0{margin-top:0;padding-top:0;border-top:none}
-.S h2,.S0 h2{font-size:1rem;color:#aaa;margin-bottom:.5rem}
+.S0{margin-top:0}
+h2{font-size:1rem;color:#aaa;margin-bottom:.5rem}
 .badge{display:inline-block;background:#2a2a2a;border:1px solid #444;border-radius:6px;padding:.25rem .6rem;font-size:.8rem;margin:.15rem 0}
 .SR{display:flex;gap:.5rem;margin-top:.5rem}.SR>form{flex:1}
-.sb{margin-top:0;width:100%;padding:.6rem .25rem;background:#2a2a2a;border:1px solid #555;color:#eee;font-size:.85rem;font-weight:600;cursor:pointer}
-.sb:hover{background:#3a3a3a}
+.sb{margin-top:0;padding:.6rem .25rem;background:#2a2a2a;border:1px solid #555;color:#eee;font-size:.85rem;font-weight:600;cursor:pointer}
 .FG{display:grid;grid-template-columns:repeat(5,1fr);gap:.35rem;margin-top:.5rem}
-.fb{margin-top:0;width:100%;padding:.45rem .1rem;font-size:.7rem;background:#2a2a2a;border:1px solid #555;color:#eee;font-weight:600;border-radius:8px;cursor:pointer}
-.fb:hover{background:#3a3a3a}
+.fb{margin-top:0;padding:.45rem .1rem;font-size:.7rem;background:#2a2a2a;border:1px solid #555;color:#eee;font-weight:600;border-radius:8px;cursor:pointer}
+.fb:hover,.sb:hover{background:#3a3a3a}
 .ht{font-size:.75rem;color:#666;margin-top:.35rem}
-</style></head><body><div class="W"><h1>🧊 <span>YETI</span> Config</h1><div class="G"><div style="padding-right:2rem">
+</style></head><body><div class="W"><h1>🧊 <span>YETI</span> Config</h1><div class="G"><div>
 <form action="/save" method="POST"><div class="S0"><h2>WiFi</h2>)rawhtml";
 
     html += "<label>SSID</label><input name=\"ssid\" type=\"text\" value=\"" + _ssid + "\" required>";
     html += R"rawhtml(<label>Password</label><input name="pass" type="password" placeholder="(current saved)"></div>
 <div class="S"><h2>Location</h2><div class="R">)rawhtml";
-    html += "<div><label>Latitude</label><input name=\"lat\" type=\"text\" value=\"" + _lat + "\" required></div>";
-    html += "<div><label>Longitude</label><input name=\"lon\" type=\"text\" value=\"" + _lon + "\" required></div>";
+    html += "<div><label>Lat</label><input name=\"lat\" type=\"text\" value=\"" + _lat + "\" required></div>";
+    html += "<div><label>Lon</label><input name=\"lon\" type=\"text\" value=\"" + _lon + "\" required></div>";
     html += R"rawhtml(</div></div><div class="S"><h2>Timezone</h2><select name="tz">)rawhtml";
 
     static const int32_t tz_vals[] = {
@@ -142,38 +140,38 @@ button:hover{background:#89c4ff}
     };
     static const char* tz_labels[] = {
         "UTC-12", "UTC-11", "UTC-10", "UTC-9", "UTC-8", "UTC-7", "UTC-6", "UTC-5", "UTC-4", "UTC-3",
-        "UTC-2", "UTC-1", "UTC+0", "UTC+1", "UTC+2", "UTC+3", "UTC+3:30", "UTC+4", "UTC+4:30", "UTC+5",
-        "UTC+5:30 (IST)", "UTC+5:45", "UTC+6", "UTC+6:30", "UTC+7", "UTC+8", "UTC+9 (JST)", "UTC+9:30",
+        "UTC-2", "UTC-1", "UTC+0", "UTC+1", "UTC+2", "UTC+3", "3:30", "UTC+4", "4:30", "UTC+5",
+        "5:30", "5:45", "UTC+6", "6:30", "UTC+7", "UTC+8", "UTC+9", "9:30",
         "UTC+10", "UTC+11", "UTC+12"
     };
     for (int i = 0; i < 31; i++) {
         html += "<option value=\"" + String(tz_vals[i]) + "\"" + (tz_vals[i] == _tzOffsetSec ? " selected" : "") + ">" + tz_labels[i] + "</option>";
     }
     
-    html += R"rawhtml(</select></div><div class="S"><h2>Units</h2><label>Temperature Unit</label><select name="faren">)rawhtml";
+    html += R"rawhtml(</select></div><div class="S"><h2>Units</h2><label>Temp Unit</label><select name="faren">)rawhtml";
     html += String("<option value=\"1\"") + (_useFahrenheit ? " selected" : "") + ">Fahrenheit (°F)</option>";
     html += String("<option value=\"0\"") + (!_useFahrenheit ? " selected" : "") + ">Celsius (°C)</option>";
-    html += R"rawhtml(</select></div><button type="submit">Save & Reboot</button></form></div><div class="C"><div class="S0"><h2>Status</h2><div>)rawhtml";
+    html += R"rawhtml(</select></div><button type="submit">Save & Reboot</button></form></div><div class="C"><div><h2>Status</h2><div>)rawhtml";
 
-    html += String("<span class=\"badge\">WiFi: ") + (isConnected() ? "✅ Connected" : "❌ Offline") + "</span><br>";
+    html += String("<span class=\"badge\">WiFi: ") + (isConnected() ? "OK" : "Offline") + "</span><br>";
     html += String("<span class=\"badge\">IP: ") + _localIP + "</span><br>";
     int t = (int)(_tempC + 0.5f);
     if (_useFahrenheit && _tempC > -90) t = (int)((_tempC * 9/5) + 32.5f);
     String weatherStr = (_tempC < -90) ? "--" : (String(t) + "°" + (_useFahrenheit ? "F" : "C") + " " + _weatherDesc);
     html += "<span class=\"badge\">" + weatherStr + "</span>";
 
-    html += R"rawhtml(</div></div><div class="S"><h2>Touch Simulation</h2><div class="SR">
-<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="single"><button type="submit" class="sb">Single Tap</button></form>
-<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="double"><button type="submit" class="sb">Double Tap</button></form>
-<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="long"><button type="submit" class="sb">Long Press</button></form>
-</div><p class="ht">Single=next expr &bull; Double=info &bull; Long=love</p></div><div class="S"><h2>Expression</h2><div class="FG">)rawhtml";
+    html += R"rawhtml(</div></div><div class="S"><h2>Simulation</h2><div class="SR">
+<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="single"><button type="submit" class="sb">Single</button></form>
+<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="double"><button type="submit" class="sb">Double</button></form>
+<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="long"><button type="submit" class="sb">Long</button></form>
+</div><p class="ht">Single=next &bull; Double=info &bull; Long=love</p></div><div class="S"><h2>Expression</h2><form method="POST" action="/api/expression" class="FG">)rawhtml";
 
     static const char* expr_names[] = {"Happy","Neutral","Sad","Surprised","Love","Sleepy","Angry","Dead","Blink","Wink L","Wink R"};
     for (int i = 0; i < 11; i++) {
-        html += "<form method=\"POST\" action=\"/api/expression\"><input type=\"hidden\" name=\"expr\" value=\"" + String(i) + "\"><button type=\"submit\" class=\"fb\">" + expr_names[i] + "</button></form>";
+        html += "<button name=\"expr\" value=\"" + String(i) + "\" class=\"fb\">" + expr_names[i] + "</button>";
     }
 
-    html += R"rawhtml(</div></div></div></div></div></body></html>)rawhtml";
+    html += R"rawhtml(</form></div></div></div></div></body></html>)rawhtml";
     _server.sendHeader("Cache-Control", "no-cache");
     _server.send(200, "text/html", html);
 }

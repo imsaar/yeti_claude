@@ -24,11 +24,14 @@ private:
     // Internal state
     bool     _wasPressed     = false;
     uint32_t _pressStart     = 0;
-    uint32_t _lastReleaseMs  = 0;
     uint8_t  _tapCount       = 0;
     bool     _longFired      = false;   // prevent repeated long-press events
     bool     _pendingSingle  = false;   // single tap is "pending" until double-tap window closes
     uint32_t _pendingStart   = 0;
+
+    // Non-blocking debounce state
+    bool     _lastPhys       = false;
+    uint32_t _lastPhysChange = 0;
 
     bool rawPressed();
 };

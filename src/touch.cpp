@@ -5,7 +5,6 @@ void TouchHandler::begin() {
     pinMode(TOUCH_PIN, INPUT_PULLDOWN);
     _wasPressed    = false;
     _pressStart    = 0;
-    _lastReleaseMs = 0;
     _tapCount      = 0;
     _longFired     = false;
     _pendingSingle = false;
@@ -14,28 +13,35 @@ void TouchHandler::begin() {
 
 // Returns true if the touch sensor is currently active (HIGH)
 bool TouchHandler::rawPressed() {
-    // Debounce: read twice with a short delay
-    if (digitalRead(TOUCH_PIN) == HIGH) {
-        delay(DEBOUNCE_MS);
-        return (digitalRead(TOUCH_PIN) == HIGH);
-    }
-    return false;
+    return (digitalRead(TOUCH_PIN) == HIGH);
 }
 
 TouchEvent TouchHandler::poll() {
     uint32_t now       = millis();
-    bool     pressed   = rawPressed();
+    bool     phys      = rawPressed();
     TouchEvent result  = TOUCH_NONE;
 
+    // ── Debounce ───────────────────────────────────────────────────────────
+    if (phys != _lastPhys) {
+        _lastPhys = phys;
+        _lastPhysChange = now;
+    }
+
+    // Only proceed if the signal has been stable for DEBOUNCE_MS
+    if (now - _lastPhysChange < DEBOUNCE_MS) {
+        // Still debouncing — use the last stable state for logic below
+        phys = _wasPressed; 
+    }
+
     // ── Detect press START ─────────────────────────────────────────────────
-    if (pressed && !_wasPressed) {
+    if (phys && !_wasPressed) {
         _wasPressed  = true;
         _pressStart  = now;
         _longFired   = false;
     }
 
     // ── While held: fire long-press if threshold reached ───────────────────
-    if (pressed && _wasPressed && !_longFired) {
+    if (phys && _wasPressed && !_longFired) {
         if (now - _pressStart >= LONG_PRESS_MS) {
             _longFired     = true;
             _tapCount      = 0;
@@ -45,21 +51,17 @@ TouchEvent TouchHandler::poll() {
     }
 
     // ── Detect press END (release) ─────────────────────────────────────────
-    if (!pressed && _wasPressed) {
+    if (!phys && _wasPressed) {
         _wasPressed = false;
         uint32_t duration = now - _pressStart;
 
-        if (!_longFired && duration >= DEBOUNCE_MS) {
+        if (!_longFired) {
             // Valid short tap
             _tapCount++;
-            _lastReleaseMs = now;
-
             if (_tapCount == 1) {
-                // Park the single-tap — might become a double-tap
                 _pendingSingle = true;
                 _pendingStart  = now;
             } else if (_tapCount >= 2) {
-                // Confirmed double-tap
                 _tapCount      = 0;
                 _pendingSingle = false;
                 result = TOUCH_DOUBLE;
