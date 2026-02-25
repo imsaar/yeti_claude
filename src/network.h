@@ -43,9 +43,11 @@ public:
 
     // ── Simulation ──────────────────────────────────────────────────────────
     // Returns any pending simulated touch event and clears it (call each loop)
-    TouchEvent  consumeSimulatedEvent();
+    TouchEvent   consumeSimulatedEvent();
     // Returns a pending expression set via the web UI (-1 = none)
-    int8_t      consumePendingExpression();
+    int8_t       consumePendingExpression();
+    // Returns a pending buzz pattern set via the web UI (BUZZ_NONE = none)
+    BuzzPattern  consumePendingBuzzPattern();
 
 private:
     Preferences  _prefs;
@@ -70,8 +72,9 @@ private:
 
     uint32_t   _lastWeatherMs   = 0;
     uint32_t   _lastTimeMs      = 0;
-    TouchEvent _simulatedEvent  = TOUCH_NONE;
-    int8_t     _pendingExpression = -1;
+    TouchEvent  _simulatedEvent       = TOUCH_NONE;
+    int8_t      _pendingExpression    = -1;
+    BuzzPattern _pendingBuzzPattern   = BUZZ_NONE;
 
     void connectWiFi();
     void startSTA();
@@ -86,5 +89,7 @@ private:
     void handleApiStatus();
     void handleSimulate();
     void handleApiExpression();
+    void handleApiBuzz();
+    void handleStyle();
     void handleNotFound();
 };
