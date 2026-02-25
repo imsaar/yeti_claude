@@ -1,6 +1,5 @@
 #include <Wire.h>
 #include <Arduino.h>
-#include <math.h>
 #include <string.h>
 #include "display.h"
 
@@ -512,13 +511,15 @@ void DisplayManager::drawWeatherIcon(int cx, int cy, const char* desc) {
 
 void DisplayManager::drawSun(int cx, int cy) {
     _disp.drawCircle(cx, cy, 5, SSD1306_WHITE);
+    // 8 rays at 45° intervals — pre-computed to avoid cosf/sinf which pull in
+    // F-extension libm instructions that crash on rv32imc (no hardware FPU).
+    static const int8_t dx7[8]  = { 7,  5,  0, -5, -7, -5,  0,  5};
+    static const int8_t dy7[8]  = { 0,  5,  7,  5,  0, -5, -7, -5};
+    static const int8_t dx10[8] = {10,  7,  0, -7,-10, -7,  0,  7};
+    static const int8_t dy10[8] = { 0,  7, 10,  7,  0, -7,-10, -7};
     for (int i = 0; i < 8; i++) {
-        float angle = i * PI / 4.0;
-        int x1 = cx + cos(angle) * 7;
-        int y1 = cy + sin(angle) * 7;
-        int x2 = cx + cos(angle) * 10;
-        int y2 = cy + sin(angle) * 10;
-        _disp.drawLine(x1, y1, x2, y2, SSD1306_WHITE);
+        _disp.drawLine(cx + dx7[i],  cy + dy7[i],
+                       cx + dx10[i], cy + dy10[i], SSD1306_WHITE);
     }
 }
 
