@@ -5,6 +5,24 @@
 // freq=0 in a non-terminal entry = rest (silence for that duration)
 
 // C5=523 D5=587 E5=659 G5=784 A5=880 C6=1047
+// G4=392 Eb4=311 Bb4=466 D5=587 Eb5=622  (Star Wars notes)
+
+// Star Wars main theme — two phrases, ~108 BPM
+// Rhythm key: q=quarter(480+30ms), dq=dotted-quarter(720+30ms),
+//             e=eighth(220+20ms), h=half(900+80ms phrase-end)
+static const BuzzNote SEQ_STARWARS[] = {
+    // -- Phrase 1: G G G Eb(dq) Bb(e) G Eb(dq) Bb(e) G(h) --
+    {392,480},{0,30}, {392,480},{0,30}, {392,480},{0,30},
+    {311,720},{0,30}, {466,220},{0,20},
+    {392,480},{0,30}, {311,720},{0,30}, {466,220},{0,20},
+    {392,900},{0,80},
+    // -- Phrase 2 (higher): D5 D5 D5 Eb5(dq) Bb4(e) G4 Eb4(dq) Bb4(e) G4(h) --
+    {587,480},{0,30}, {587,480},{0,30}, {587,480},{0,30},
+    {622,720},{0,30}, {466,220},{0,20},
+    {392,480},{0,30}, {311,720},{0,30}, {466,220},{0,20},
+    {392,900},{0,0},  // end
+};
+
 static const BuzzNote SEQ_BOOT[]       = {{523,80},{659,80},{784,80},{1047,160},{0,0}};
 static const BuzzNote SEQ_TAP[]        = {{1200,35},{0,0}};
 static const BuzzNote SEQ_DOUBLE[]     = {{1200,35},{0,35},{1400,35},{0,0}};
@@ -29,6 +47,7 @@ const BuzzNote* BuzzerManager::getSequence(BuzzPattern p) {
         case BUZZ_HAPPY:      return SEQ_HAPPY;
         case BUZZ_SAD:        return SEQ_SAD;
         case BUZZ_ALERT:      return SEQ_ALERT;
+        case BUZZ_STARWARS:   return SEQ_STARWARS;
         default:              return nullptr;
     }
 }

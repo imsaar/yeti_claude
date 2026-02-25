@@ -103,5 +103,6 @@ enum BuzzPattern : uint8_t {
     BUZZ_HAPPY,       // ascending arpeggio
     BUZZ_SAD,         // descending phrase
     BUZZ_ALERT,       // three warning beeps
+    BUZZ_STARWARS,    // Star Wars main theme (two phrases)
     BUZZ_COUNT
 };

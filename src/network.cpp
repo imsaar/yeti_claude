@@ -85,6 +85,7 @@ void NetworkManager::setupMDNS() {
 
 void NetworkManager::setupWebServer() {
     _server.on("/",              [this]() { handleRoot(); });
+    _server.on("/s.css",         [this]() { handleStyle(); });
     _server.on("/save",          HTTP_POST, [this]() { handleSave(); });
     _server.on("/api/status",    [this]() { handleApiStatus(); });
     _server.on("/api/simulate",  HTTP_POST, [this]() { handleSimulate(); });
@@ -95,12 +96,8 @@ void NetworkManager::setupWebServer() {
     _server.begin();
 }
 
-void NetworkManager::handleRoot() {
-    String html;
-    html.reserve(8192);
-    html += R"rawhtml(<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>YETI</title><style>
+void NetworkManager::handleStyle() {
+    static const char css[] PROGMEM = R"css(
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#111;color:#eee;display:flex;justify-content:center;padding:1.5rem 1rem}
 .W{background:#1e1e1e;border-radius:16px;padding:2rem;width:100%;max-width:820px;box-shadow:0 8px 32px #0008}
@@ -124,14 +121,30 @@ h2{font-size:1rem;color:#aaa;margin-bottom:.5rem}
 .fb{margin-top:0;padding:.45rem .1rem;font-size:.7rem;background:#2a2a2a;border:1px solid #555;color:#eee;font-weight:600;border-radius:8px;cursor:pointer}
 .fb:hover,.sb:hover{background:#3a3a3a}
 .ht{font-size:.75rem;color:#666;margin-top:.35rem}
-</style></head><body><div class="W"><h1>🧊 <span>YETI</span> Config</h1><div class="G"><div>
+)css";
+    _server.sendHeader("Cache-Control", "max-age=86400");
+    _server.send_P(200, "text/css", css);
+}
+
+void NetworkManager::handleRoot() {
+    String html;
+    html.reserve(8192);
+    html += R"rawhtml(<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YETI</title><link rel="stylesheet" href="/s.css"></head><body><div class="W"><h1>🧊 <span>YETI</span> Config</h1><div class="G"><div>
 <form action="/save" method="POST"><div class="S0"><h2>WiFi</h2>)rawhtml";
 
-    html += "<label>SSID</label><input name=\"ssid\" type=\"text\" value=\"" + _ssid + "\" required>";
+    html += "<label>SSID</label><input name=\"ssid\" type=\"text\" value=\"";
+    html += _ssid;
+    html += "\" required>";
     html += R"rawhtml(<label>Password</label><input name="pass" type="password" placeholder="(current saved)"></div>
 <div class="S"><h2>Location</h2><div class="R">)rawhtml";
-    html += "<div><label>Lat</label><input name=\"lat\" type=\"text\" value=\"" + _lat + "\" required></div>";
-    html += "<div><label>Lon</label><input name=\"lon\" type=\"text\" value=\"" + _lon + "\" required></div>";
+    html += "<div><label>Lat</label><input name=\"lat\" type=\"text\" value=\"";
+    html += _lat;
+    html += "\" required></div>";
+    html += "<div><label>Lon</label><input name=\"lon\" type=\"text\" value=\"";
+    html += _lon;
+    html += "\" required></div>";
     html += R"rawhtml(</div></div><div class="S"><h2>Timezone</h2><select name="tz">)rawhtml";
 
     static const int32_t tz_vals[] = {
@@ -146,39 +159,55 @@ h2{font-size:1rem;color:#aaa;margin-bottom:.5rem}
         "UTC+10", "UTC+11", "UTC+12"
     };
     for (int i = 0; i < 31; i++) {
-        html += "<option value=\"" + String(tz_vals[i]) + "\"" + (tz_vals[i] == _tzOffsetSec ? " selected" : "") + ">" + tz_labels[i] + "</option>";
+        html += "<option value=\"";
+        html += String(tz_vals[i]);
+        html += "\"";
+        if (tz_vals[i] == _tzOffsetSec) html += " selected";
+        html += ">";
+        html += tz_labels[i];
+        html += "</option>";
     }
     
     html += R"rawhtml(</select></div><div class="S"><h2>Units</h2><label>Temp Unit</label><select name="faren">)rawhtml";
-    html += String("<option value=\"1\"") + (_useFahrenheit ? " selected" : "") + ">Fahrenheit (°F)</option>";
-    html += String("<option value=\"0\"") + (!_useFahrenheit ? " selected" : "") + ">Celsius (°C)</option>";
+    html += "<option value=\"1\""; if (_useFahrenheit) html += " selected"; html += ">Fahrenheit (°F)</option>";
+    html += "<option value=\"0\""; if (!_useFahrenheit) html += " selected"; html += ">Celsius (°C)</option>";
     html += R"rawhtml(</select></div><button type="submit">Save & Reboot</button></form></div><div class="C"><div><h2>Status</h2><div>)rawhtml";
 
-    html += String("<span class=\"badge\">WiFi: ") + (isConnected() ? "OK" : "Offline") + "</span><br>";
-    html += String("<span class=\"badge\">IP: ") + _localIP + "</span><br>";
+    html += "<span class=\"badge\">WiFi: ";
+    html += (isConnected() ? "OK" : "Offline");
+    html += "</span><br><span class=\"badge\">IP: ";
+    html += _localIP;
+    html += "</span><br>";
     int t = (int)(_tempC + 0.5f);
     if (_useFahrenheit && _tempC > -90) t = (int)((_tempC * 9/5) + 32.5f);
     String weatherStr = (_tempC < -90) ? "--" : (String(t) + "°" + (_useFahrenheit ? "F" : "C") + " " + _weatherDesc);
-    html += "<span class=\"badge\">" + weatherStr + "</span>";
+    html += "<span class=\"badge\">";
+    html += weatherStr;
+    html += "</span>";
 
-    html += R"rawhtml(</div></div><div class="S"><h2>Simulation</h2><div class="SR">
-<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="single"><button type="submit" class="sb">Single</button></form>
-<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="double"><button type="submit" class="sb">Double</button></form>
-<form method="POST" action="/api/simulate"><input type="hidden" name="event" value="long"><button type="submit" class="sb">Long</button></form>
-</div><p class="ht">Single=next &bull; Double=info &bull; Long=love</p></div><div class="S"><h2>Buzzer</h2><div class="SR">
-<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="boot"><button type="submit" class="sb">Boot</button></form>
-<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="tap"><button type="submit" class="sb">Tap</button></form>
-<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="double"><button type="submit" class="sb">Double</button></form>
-<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="long"><button type="submit" class="sb">Long</button></form>
+    html += R"rawhtml(</div></div><div class="S"><h2>Simulation</h2><form method="POST" action="/api/simulate" class="SR">
+<button name="event" value="single" class="sb">Single</button>
+<button name="event" value="double" class="sb">Double</button>
+<button name="event" value="long" class="sb">Long</button>
+</form><p class="ht">Single=next &bull; Double=info &bull; Long=love</p></div><div class="S"><h2>Buzzer</h2><form method="POST" action="/api/buzz"><div class="SR">
+<button name="pattern" value="boot" class="sb">Boot</button>
+<button name="pattern" value="tap" class="sb">Tap</button>
+<button name="pattern" value="double" class="sb">Double</button>
+<button name="pattern" value="long" class="sb">Long</button>
 </div><div class="SR" style="margin-top:.35rem">
-<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="happy"><button type="submit" class="sb">Happy</button></form>
-<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="sad"><button type="submit" class="sb">Sad</button></form>
-<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="alert"><button type="submit" class="sb">Alert</button></form>
-</div></div><div class="S"><h2>Expression</h2><form method="POST" action="/api/expression" class="FG">)rawhtml";
+<button name="pattern" value="happy" class="sb">Happy</button>
+<button name="pattern" value="sad" class="sb">Sad</button>
+<button name="pattern" value="alert" class="sb">Alert</button>
+<button name="pattern" value="starwars" class="sb">&#9733; Star Wars</button>
+</div></form></div><div class="S"><h2>Expression</h2><form method="POST" action="/api/expression" class="FG">)rawhtml";
 
     static const char* expr_names[] = {"Happy","Neutral","Sad","Surprised","Love","Sleepy","Angry","Dead","Blink","Wink L","Wink R"};
     for (int i = 0; i < 11; i++) {
-        html += "<button name=\"expr\" value=\"" + String(i) + "\" class=\"fb\">" + expr_names[i] + "</button>";
+        html += "<button name=\"expr\" value=\"";
+        html += String(i);
+        html += "\" class=\"fb\">";
+        html += expr_names[i];
+        html += "</button>";
     }
 
     html += R"rawhtml(</form></div></div></div></div></body></html>)rawhtml";
@@ -250,7 +279,8 @@ void NetworkManager::handleApiBuzz() {
     else if (p == "long")   _pendingBuzzPattern = BUZZ_LONG_PRESS;
     else if (p == "happy")  _pendingBuzzPattern = BUZZ_HAPPY;
     else if (p == "sad")    _pendingBuzzPattern = BUZZ_SAD;
-    else if (p == "alert")  _pendingBuzzPattern = BUZZ_ALERT;
+    else if (p == "alert")    _pendingBuzzPattern = BUZZ_ALERT;
+    else if (p == "starwars") _pendingBuzzPattern = BUZZ_STARWARS;
     _server.sendHeader("Location", "/");
     _server.send(302, "text/plain", "");
 }

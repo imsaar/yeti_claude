@@ -90,5 +90,6 @@ private:
     void handleSimulate();
     void handleApiExpression();
     void handleApiBuzz();
+    void handleStyle();
     void handleNotFound();
 };
