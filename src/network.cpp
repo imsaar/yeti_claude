@@ -89,6 +89,7 @@ void NetworkManager::setupWebServer() {
     _server.on("/api/status",    [this]() { handleApiStatus(); });
     _server.on("/api/simulate",  HTTP_POST, [this]() { handleSimulate(); });
     _server.on("/api/expression",HTTP_POST, [this]() { handleApiExpression(); });
+    _server.on("/api/buzz",      HTTP_POST, [this]() { handleApiBuzz(); });
     _server.on("/favicon.ico",   HTTP_GET,  [this]() { _server.send(204, "text/plain", ""); });
     _server.onNotFound([this]() { handleNotFound(); });
     _server.begin();
@@ -164,7 +165,16 @@ h2{font-size:1rem;color:#aaa;margin-bottom:.5rem}
 <form method="POST" action="/api/simulate"><input type="hidden" name="event" value="single"><button type="submit" class="sb">Single</button></form>
 <form method="POST" action="/api/simulate"><input type="hidden" name="event" value="double"><button type="submit" class="sb">Double</button></form>
 <form method="POST" action="/api/simulate"><input type="hidden" name="event" value="long"><button type="submit" class="sb">Long</button></form>
-</div><p class="ht">Single=next &bull; Double=info &bull; Long=love</p></div><div class="S"><h2>Expression</h2><form method="POST" action="/api/expression" class="FG">)rawhtml";
+</div><p class="ht">Single=next &bull; Double=info &bull; Long=love</p></div><div class="S"><h2>Buzzer</h2><div class="SR">
+<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="boot"><button type="submit" class="sb">Boot</button></form>
+<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="tap"><button type="submit" class="sb">Tap</button></form>
+<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="double"><button type="submit" class="sb">Double</button></form>
+<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="long"><button type="submit" class="sb">Long</button></form>
+</div><div class="SR" style="margin-top:.35rem">
+<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="happy"><button type="submit" class="sb">Happy</button></form>
+<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="sad"><button type="submit" class="sb">Sad</button></form>
+<form method="POST" action="/api/buzz"><input type="hidden" name="pattern" value="alert"><button type="submit" class="sb">Alert</button></form>
+</div></div><div class="S"><h2>Expression</h2><form method="POST" action="/api/expression" class="FG">)rawhtml";
 
     static const char* expr_names[] = {"Happy","Neutral","Sad","Surprised","Love","Sleepy","Angry","Dead","Blink","Wink L","Wink R"};
     for (int i = 0; i < 11; i++) {
@@ -232,8 +242,22 @@ void NetworkManager::handleApiExpression() {
     _server.send(302, "text/plain", "");
 }
 
+void NetworkManager::handleApiBuzz() {
+    String p = _server.arg("pattern");
+    if      (p == "boot")   _pendingBuzzPattern = BUZZ_BOOT;
+    else if (p == "tap")    _pendingBuzzPattern = BUZZ_TAP;
+    else if (p == "double") _pendingBuzzPattern = BUZZ_DOUBLE_TAP;
+    else if (p == "long")   _pendingBuzzPattern = BUZZ_LONG_PRESS;
+    else if (p == "happy")  _pendingBuzzPattern = BUZZ_HAPPY;
+    else if (p == "sad")    _pendingBuzzPattern = BUZZ_SAD;
+    else if (p == "alert")  _pendingBuzzPattern = BUZZ_ALERT;
+    _server.sendHeader("Location", "/");
+    _server.send(302, "text/plain", "");
+}
+
 TouchEvent NetworkManager::consumeSimulatedEvent() { TouchEvent e = _simulatedEvent; _simulatedEvent = TOUCH_NONE; return e; }
 int8_t NetworkManager::consumePendingExpression() { int8_t e = _pendingExpression; _pendingExpression = -1; return e; }
+BuzzPattern NetworkManager::consumePendingBuzzPattern() { BuzzPattern p = _pendingBuzzPattern; _pendingBuzzPattern = BUZZ_NONE; return p; }
 void NetworkManager::handleNotFound() { _server.sendHeader("Location", "/"); _server.send(302, "text/plain", "Redirect"); }
 
 void NetworkManager::fetchWeather() {

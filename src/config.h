@@ -92,3 +92,16 @@ enum TouchEvent : uint8_t {
     TOUCH_DOUBLE,
     TOUCH_LONG,
 };
+
+// ─── Buzzer Patterns ─────────────────────────────────────────────────────────
+enum BuzzPattern : uint8_t {
+    BUZZ_NONE        = 0,
+    BUZZ_BOOT,        // rising three-note chime on startup
+    BUZZ_TAP,         // short click on single-tap
+    BUZZ_DOUBLE_TAP,  // two-click on double-tap
+    BUZZ_LONG_PRESS,  // love fanfare on long-press
+    BUZZ_HAPPY,       // ascending arpeggio
+    BUZZ_SAD,         // descending phrase
+    BUZZ_ALERT,       // three warning beeps
+    BUZZ_COUNT
+};

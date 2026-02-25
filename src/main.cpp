@@ -3,11 +3,13 @@
 #include "display.h"
 #include "touch.h"
 #include "network.h"
+#include "buzzer.h"
 
 // ─── Globals ──────────────────────────────────────────────────────────────────
 static DisplayManager disp;
 static TouchHandler   touch;
 static NetworkManager net;
+static BuzzerManager  buzz;
 
 static AppState   appState          = STATE_BOOT;
 static InfoScreen infoScreen        = INFO_CLOCK;
@@ -38,6 +40,9 @@ void setup() {
     }
     disp.showBootScreen();
 
+    // Buzzer
+    buzz.begin();
+
     // Touch sensor
     touch.begin();
 
@@ -52,21 +57,30 @@ void setup() {
         enterFaceMode();
     }
 
+    buzz.play(BUZZ_BOOT);
+
     lastInteraction = millis();
     Serial.println("[YETI] Ready.");
 }
 
 // ─── loop() ──────────────────────────────────────────────────────────────────
 void loop() {
-    // Service display animations (only in face mode) and web server
+    // Service display animations (only in face mode), buzzer, and web server
     if (appState == STATE_FACE) {
         disp.update();
     }
+    buzz.update();
     net.update();
 
     TouchEvent evt = touch.poll();
     // Merge any event injected via the web UI simulation panel
     { TouchEvent sim = net.consumeSimulatedEvent(); if (sim != TOUCH_NONE) evt = sim; }
+
+    // Play any buzzer pattern triggered from the web UI
+    {
+        BuzzPattern bp = net.consumePendingBuzzPattern();
+        if (bp != BUZZ_NONE) buzz.play(bp);
+    }
 
     // Apply any expression set directly from the web UI
     {
@@ -133,22 +147,23 @@ static void handleFaceState(TouchEvent evt) {
             loveReturning = false;
             cycleIdx = (cycleIdx + 1) % CYCLE_COUNT;
             disp.transitionTo(CYCLE_EXPRS[cycleIdx]);
+            buzz.play(BUZZ_TAP);
             lastCycleMs = millis();
             Serial.printf("[FACE] Expression -> %d\n", CYCLE_EXPRS[cycleIdx]);
             break;
 
         case TOUCH_DOUBLE:
             loveReturning = false;
+            buzz.play(BUZZ_DOUBLE_TAP);
             enterInfoMode();
             break;
 
         case TOUCH_LONG:
-            // Love expression + optional buzzer/motor
             loveReturning = true;
             loveStartMs   = millis();
             disp.transitionTo(EXPR_LOVE);
+            buzz.play(BUZZ_LONG_PRESS);
             Serial.println("[FACE] Love!");
-            // Optional: digitalWrite(MOTOR_PIN, HIGH); delay(200); digitalWrite(MOTOR_PIN, LOW);
             break;
 
         default:
