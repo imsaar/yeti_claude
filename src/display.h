@@ -35,7 +35,7 @@ public:
 
     // ── Info screens ────────────────────────────────────────────────────────
     void showBootScreen();
-    void showSetupScreen(const char* ssid, const char* ip);
+    void showSetupScreen(const char* ssid, const char* pass, const char* ip);
     void showSleepScreen();
     void showInfoClock(const char* timeStr, const char* dateStr,
                        float tempC, const char* weatherDesc,

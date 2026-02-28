@@ -40,8 +40,8 @@
 #define ANIM_DURATION_MS        350UL  // blink transition duration
 
 // ─── WiFi / Network ──────────────────────────────────────────────────────────
-#define AP_SSID     "YETI Setup"
-#define AP_PASS     ""              // open AP
+#define AP_SSID     "YETI"
+#define AP_PASS     "123456789"
 #define HOSTNAME    "yeti"          // → http://yeti.local
 #define NTP_SERVER  "pool.ntp.org"
 
@@ -91,6 +91,16 @@ enum TouchEvent : uint8_t {
     TOUCH_SINGLE,
     TOUCH_DOUBLE,
     TOUCH_LONG,
+};
+
+// ─── Vibration Patterns ───────────────────────────────────────────────────────
+enum VibePattern : uint8_t {
+    VIBE_NONE        = 0,
+    VIBE_BOOT,        // single long pulse on startup
+    VIBE_TAP,         // short click on single-tap
+    VIBE_DOUBLE_TAP,  // two pulses on double-tap
+    VIBE_LONG_PRESS,  // strong long pulse on long-press
+    VIBE_ALERT,       // three rapid pulses
 };
 
 // ─── Buzzer Patterns ─────────────────────────────────────────────────────────

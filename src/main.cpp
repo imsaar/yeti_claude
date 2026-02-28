@@ -4,12 +4,14 @@
 #include "touch.h"
 #include "network.h"
 #include "buzzer.h"
+#include "motor.h"
 
 // ─── Globals ──────────────────────────────────────────────────────────────────
 static DisplayManager disp;
 static TouchHandler   touch;
 static NetworkManager net;
 static BuzzerManager  buzz;
+static MotorManager   motor;
 
 static AppState   appState          = STATE_BOOT;
 static InfoScreen infoScreen        = INFO_CLOCK;
@@ -40,8 +42,9 @@ void setup() {
     }
     disp.showBootScreen();
 
-    // Buzzer
+    // Buzzer + motor
     buzz.begin();
+    motor.begin();
 
     // Touch sensor
     touch.begin();
@@ -52,12 +55,13 @@ void setup() {
     // Show setup screen if in AP mode
     if (net.isAPMode()) {
         appState = STATE_SETUP_AP;
-        disp.showSetupScreen(AP_SSID, "192.168.4.1");
+        disp.showSetupScreen(AP_SSID, AP_PASS, "192.168.4.1");
     } else {
         enterFaceMode();
     }
 
     buzz.play(BUZZ_BOOT);
+    motor.play(VIBE_BOOT);
 
     lastInteraction = millis();
     Serial.println("[YETI] Ready.");
@@ -70,6 +74,7 @@ void loop() {
         disp.update();
     }
     buzz.update();
+    motor.update();
     net.update();
 
     TouchEvent evt = touch.poll();
@@ -148,6 +153,7 @@ static void handleFaceState(TouchEvent evt) {
             cycleIdx = (cycleIdx + 1) % CYCLE_COUNT;
             disp.transitionTo(CYCLE_EXPRS[cycleIdx]);
             buzz.play(BUZZ_TAP);
+            motor.play(VIBE_TAP);
             lastCycleMs = millis();
             Serial.printf("[FACE] Expression -> %d\n", CYCLE_EXPRS[cycleIdx]);
             break;
@@ -155,6 +161,7 @@ static void handleFaceState(TouchEvent evt) {
         case TOUCH_DOUBLE:
             loveReturning = false;
             buzz.play(BUZZ_DOUBLE_TAP);
+            motor.play(VIBE_DOUBLE_TAP);
             enterInfoMode();
             break;
 
@@ -163,6 +170,7 @@ static void handleFaceState(TouchEvent evt) {
             loveStartMs   = millis();
             disp.transitionTo(EXPR_LOVE);
             buzz.play(BUZZ_LONG_PRESS);
+            motor.play(VIBE_LONG_PRESS);
             Serial.println("[FACE] Love!");
             break;
 
@@ -202,7 +210,7 @@ static void handleInfoState(TouchEvent evt) {
             if (infoScreen == INFO_NETWORK) {
                 net.startAPMode();
                 appState = STATE_SETUP_AP;
-                disp.showSetupScreen(AP_SSID, "192.168.4.1");
+                disp.showSetupScreen(AP_SSID, AP_PASS, "192.168.4.1");
                 return;
             }
             break;

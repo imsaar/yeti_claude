@@ -362,17 +362,16 @@ void DisplayManager::showBootScreen() {
     delay(1500);
 }
 
-void DisplayManager::showSetupScreen(const char* ssid, const char* ip) {
+void DisplayManager::showSetupScreen(const char* ssid, const char* pass, const char* ip) {
     _disp.clearDisplay();
     _disp.setTextColor(SSD1306_WHITE);
     centreText("WiFi Setup", 0, 1);
     _disp.drawFastHLine(0, 10, OLED_W, SSD1306_WHITE);
 
     _disp.setTextSize(1);
-    _disp.setCursor(0, 14);  _disp.print("Connect to WiFi:");
-    _disp.setCursor(0, 24);  _disp.print(ssid);
-    _disp.setCursor(0, 36);  _disp.print("Then browse to:");
-    _disp.setCursor(0, 46);  _disp.print(ip);
+    _disp.setCursor(0, 14);  _disp.print("SSID: "); _disp.print(ssid);
+    _disp.setCursor(0, 25);  _disp.print("Pass: "); _disp.print(pass);
+    _disp.setCursor(0, 36);  _disp.print("IP:   "); _disp.print(ip);
     _disp.display();
 }
 

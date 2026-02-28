@@ -33,9 +33,13 @@ static const BuzzNote SEQ_ALERT[]      = {{880,90},{0,55},{880,90},{0,55},{880,1
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+#define BUZZ_CH  0   // LEDC channel reserved for buzzer
+#define BUZZ_RES 10  // 10-bit resolution
+
 void BuzzerManager::begin() {
-    pinMode(BUZZER_PIN, OUTPUT);
-    digitalWrite(BUZZER_PIN, LOW);
+    ledcSetup(BUZZ_CH, 1000, BUZZ_RES);
+    ledcAttachPin(BUZZER_PIN, BUZZ_CH);
+    ledcWrite(BUZZ_CH, 0);
 }
 
 const BuzzNote* BuzzerManager::getSequence(BuzzPattern p) {
@@ -53,11 +57,7 @@ const BuzzNote* BuzzerManager::getSequence(BuzzPattern p) {
 }
 
 void BuzzerManager::startNote(uint16_t freq) {
-    if (freq == 0) {
-        noTone(BUZZER_PIN);
-    } else {
-        tone(BUZZER_PIN, freq);
-    }
+    ledcWriteTone(BUZZ_CH, freq);
 }
 
 void BuzzerManager::play(BuzzPattern pattern) {
@@ -72,7 +72,7 @@ void BuzzerManager::play(BuzzPattern pattern) {
 }
 
 void BuzzerManager::stop() {
-    noTone(BUZZER_PIN);
+    ledcWriteTone(BUZZ_CH, 0);
     _active  = false;
     _seq     = nullptr;
     _noteIdx = 0;
