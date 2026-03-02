@@ -25,7 +25,7 @@ The enclosure is the [Compagnon 309 by Leroyd](https://makerworld.com) on MakerW
 | Component | Spec | Notes |
 |---|---|---|
 | Microcontroller | ESP32-C3 Super Mini / Mini | 160 MHz RISC-V, 320 KB RAM, 4 MB Flash |
-| Display | 0.96" SSD1306 OLED, I²C, 128×64 px | 26 mm × 26 mm module |
+| Display | 0.96" SSD1306 **or** 1.3" SH1106 OLED, I²C, 128×64 px | Same wiring; select driver in `config.h` |
 | Touch sensor | TTP223 capacitive touch module | 18 × 16 mm max footprint |
 | Wiring | Dupont jumper wires | ~7 cm recommended for SDA/SCL |
 | Magnets (optional) | 8 × 2 mm neodymium, ×4 | For mounting in each foot slot |
@@ -45,6 +45,8 @@ The enclosure is the [Compagnon 309 by Leroyd](https://makerworld.com) on MakerW
 | Touch I/O | GPIO 7 (fallback: GPIO 5) |
 | Buzzer (optional) | GPIO 5 |
 | Vibration motor (optional) | GPIO 10 |
+
+> **Display driver:** `config.h` contains `#define USE_SH1106` which selects the 1.3" SH1106 driver. Comment it out to use a 0.96" SSD1306 instead. Both displays use identical wiring (SDA → GPIO 8, SCL → GPIO 9) and the same I²C address (`0x3C`).
 
 > **Note:** The touch sensor input is configured with `INPUT_PULLDOWN` to minimize noise and prevent phantom triggers. If the sensor is unresponsive, swap `TOUCH_PIN` in `config.h` to GPIO 5. Some TTP223 modules only work on GPIO 5 with certain boards.
 
@@ -90,6 +92,7 @@ pio run --target clean
 | Library | Version |
 |---|---|
 | Adafruit SSD1306 | ^2.5.9 |
+| Adafruit SH110X | ^2.1.10 |
 | Adafruit GFX Library | ^1.11.10 |
 | ArduinoJson | ^7.2.0 |
 

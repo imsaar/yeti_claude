@@ -1,7 +1,11 @@
 #pragma once
 
-#include <Adafruit_SSD1306.h>
 #include "config.h"
+#ifdef USE_SH1106
+#include <Adafruit_SH110X.h>
+#else
+#include <Adafruit_SSD1306.h>
+#endif
 
 // Per-eye drawing parameters
 struct EyeParams {
@@ -51,7 +55,11 @@ public:
     bool       isAnimating()       const { return _animating; }
 
 private:
+#ifdef USE_SH1106
+    Adafruit_SH1106G _disp;
+#else
     Adafruit_SSD1306 _disp;
+#endif
 
     Expression _current;
     Expression _target;

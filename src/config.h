@@ -5,6 +5,10 @@
 // ─── Firmware ────────────────────────────────────────────────────────────────
 #define FW_VERSION  "1.0.0"
 
+// ─── Display Driver ──────────────────────────────────────────────────────────
+// Uncomment for 1.3" SH1106 display; comment out for 0.96" SSD1306 display
+#define USE_SH1106
+
 // ─── Display Pins (I²C) ──────────────────────────────────────────────────────
 #define OLED_SDA    8
 #define OLED_SCL    9
@@ -30,8 +34,8 @@
 #define SLEEP_TIMEOUT_MS      300000UL  // sleep after 5 min idle
 #define BLINK_INTERVAL_MS      3500UL  // idle blink period
 #define PUPIL_MOVE_INTERVAL_MS 8000UL  // idle pupil wander period
-#define DOUBLE_TAP_WINDOW_MS    400UL  // max gap between two taps
-#define LONG_PRESS_MS          3000UL  // long-press threshold
+#define DOUBLE_TAP_WINDOW_MS    500UL  // max gap between two taps
+#define LONG_PRESS_MS          2000UL  // long-press threshold
 #define DEBOUNCE_MS              50UL  // touch de-bounce
 #define LOVE_HOLD_MS           3000UL  // show love face before returning
 #define INFO_AUTO_EXIT_MS     30000UL  // auto-exit info after 30 s

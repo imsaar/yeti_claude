@@ -3,6 +3,12 @@
 #include <string.h>
 #include "display.h"
 
+// Colour aliases so drawing code is identical regardless of driver
+#ifdef USE_SH1106
+#  define SSD1306_WHITE SH110X_WHITE
+#  define SSD1306_BLACK SH110X_BLACK
+#endif
+
 // ─── Mouth position (below the eyes) ─────────────────────────────────────────
 #define MOUTH_X   (OLED_W / 2)   // 64 — horizontally centred
 #define MOUTH_Y   52             // below eyes (eye bottom ≈ 43)
@@ -69,7 +75,11 @@ DisplayManager::DisplayManager()
 bool DisplayManager::begin() {
     Wire.begin(OLED_SDA, OLED_SCL);
     Wire.setClock(400000);
+#ifdef USE_SH1106
+    if (!_disp.begin(OLED_ADDR, true)) {
+#else
     if (!_disp.begin(SSD1306_SWITCHCAPVCC, OLED_ADDR)) {
+#endif
         return false;
     }
     _disp.setRotation(0);
