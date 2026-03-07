@@ -21,7 +21,6 @@ static uint32_t   lastCycleMs       = 0;
 static uint32_t   infoEnteredMs     = 0;
 static uint32_t   lastInfoRefreshMs = 0;
 static bool       loveReturning     = false;
-static uint32_t   loveStartMs       = 0;
 
 // ─── Forward declarations ─────────────────────────────────────────────────────
 static void handleFaceState(TouchEvent evt);
@@ -139,8 +138,8 @@ void loop() {
 
 // ─── Face mode ────────────────────────────────────────────────────────────────
 static void handleFaceState(TouchEvent evt) {
-    // Handle returning from love expression
-    if (loveReturning && (millis() - loveStartMs >= LOVE_HOLD_MS)) {
+    // Hold love expression until Star Wars music finishes
+    if (loveReturning && !buzz.isPlaying()) {
         loveReturning = false;
         disp.transitionTo(EXPR_HAPPY);
         cycleIdx = 0;   // reset cycle to happy
@@ -167,7 +166,6 @@ static void handleFaceState(TouchEvent evt) {
 
         case TOUCH_LONG:
             loveReturning = true;
-            loveStartMs   = millis();
             disp.transitionTo(EXPR_LOVE);
             buzz.play(BUZZ_STARWARS);
             motor.play(VIBE_STARWARS);
@@ -238,6 +236,10 @@ static void refreshInfoDisplay() {
             disp.showInfoClock(net.getTimeStr(), net.getDateStr(),
                                net.getTemperature(), net.getWeatherDesc(),
                                net.useFahrenheit());
+            break;
+        case INFO_FORECAST:
+            disp.showInfoForecast(net.getForecast(), net.getForecastCount(),
+                                  net.useFahrenheit());
             break;
         case INFO_NETWORK:
             disp.showInfoNetwork(net.isConnected(), net.getLocalIP(),

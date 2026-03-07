@@ -343,10 +343,26 @@ int8_t NetworkManager::consumePendingExpression() { int8_t e = _pendingExpressio
 BuzzPattern NetworkManager::consumePendingBuzzPattern() { BuzzPattern p = _pendingBuzzPattern; _pendingBuzzPattern = BUZZ_NONE; return p; }
 void NetworkManager::handleNotFound() { _server.sendHeader("Location", "/"); _server.send(302, "text/plain", "Redirect"); }
 
+static const char* wmoToDesc(int code) {
+    if      (code == 0)   return "Clear";
+    else if (code <= 3)   return "Cloudy";
+    else if (code <= 48)  return "Foggy";
+    else if (code <= 67)  return "Rain";
+    else if (code <= 77)  return "Snow";
+    else if (code <= 82)  return "Showers";
+    else if (code <= 99)  return "Storm";
+    else                  return "---";
+}
+
 void NetworkManager::fetchWeather() {
     if (!isConnected()) return;
     char url[256];
-    snprintf(url, sizeof(url), "https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s&current=temperature_2m,weather_code&forecast_days=1", _lat.c_str(), _lon.c_str());
+    snprintf(url, sizeof(url),
+        "https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s"
+        "&current=temperature_2m,weather_code"
+        "&daily=temperature_2m_max,weather_code"
+        "&forecast_days=3&timezone=auto",
+        _lat.c_str(), _lon.c_str());
     HTTPClient http;
     http.begin(url);
     http.addHeader("User-Agent", "YETI-Companion/1.0");
@@ -357,16 +373,37 @@ void NetworkManager::fetchWeather() {
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, payload);
         if (!err) {
+            // Current conditions
             _tempC = doc["current"]["temperature_2m"] | -99.0f;
             int wcode = doc["current"]["weather_code"] | 0;
-            if      (wcode == 0)                  strncpy(_weatherDesc, "Clear",   sizeof(_weatherDesc));
-            else if (wcode <= 3)                  strncpy(_weatherDesc, "Cloudy",  sizeof(_weatherDesc));
-            else if (wcode <= 48)                 strncpy(_weatherDesc, "Foggy",   sizeof(_weatherDesc));
-            else if (wcode <= 67)                 strncpy(_weatherDesc, "Rain",    sizeof(_weatherDesc));
-            else if (wcode <= 77)                 strncpy(_weatherDesc, "Snow",    sizeof(_weatherDesc));
-            else if (wcode <= 82)                 strncpy(_weatherDesc, "Showers", sizeof(_weatherDesc));
-            else if (wcode <= 99)                 strncpy(_weatherDesc, "Storm",   sizeof(_weatherDesc));
-            else                                  strncpy(_weatherDesc, "---",     sizeof(_weatherDesc));
+            strncpy(_weatherDesc, wmoToDesc(wcode), sizeof(_weatherDesc));
+
+            // 3-day forecast
+            JsonArray dailyTime    = doc["daily"]["time"];
+            JsonArray dailyMaxTemp = doc["daily"]["temperature_2m_max"];
+            JsonArray dailyCodes   = doc["daily"]["weather_code"];
+            _forecastCount = 0;
+            for (uint8_t i = 0; i < 3 && i < (uint8_t)dailyTime.size(); i++) {
+                ForecastDay& d = _forecast[i];
+                if (i == 0) {
+                    strncpy(d.label, "Today", sizeof(d.label));
+                } else {
+                    // Parse "YYYY-MM-DD" → abbreviated weekday
+                    const char* dateStr = dailyTime[i] | "";
+                    struct tm t = {};
+                    int y = 2000, mo = 1, day = 1;
+                    sscanf(dateStr, "%d-%d-%d", &y, &mo, &day);
+                    t.tm_year = y - 1900;
+                    t.tm_mon  = mo - 1;
+                    t.tm_mday = day;
+                    mktime(&t);
+                    strftime(d.label, sizeof(d.label), "%a", &t);
+                }
+                d.maxTempC = dailyMaxTemp[i] | -99.0f;
+                int dc = dailyCodes[i] | 0;
+                strncpy(d.desc, wmoToDesc(dc), sizeof(d.desc));
+                _forecastCount++;
+            }
         }
     }
     http.end();

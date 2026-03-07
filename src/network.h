@@ -37,9 +37,11 @@ public:
     int         getRSSI()      const;
     const char* getTimeStr()   const { return _timeStr;     }
     const char* getDateStr()   const { return _dateStr;     }
-    float       getTemperature() const { return _tempC;     }
-    const char* getWeatherDesc() const { return _weatherDesc; }
-    bool        useFahrenheit()  const { return _useFahrenheit; }
+    float       getTemperature()    const { return _tempC;        }
+    const char* getWeatherDesc()    const { return _weatherDesc;  }
+    bool        useFahrenheit()     const { return _useFahrenheit; }
+    const ForecastDay* getForecast()      const { return _forecast;      }
+    uint8_t            getForecastCount() const { return _forecastCount;  }
 
     // ── Simulation ──────────────────────────────────────────────────────────
     // Returns any pending simulated touch event and clears it (call each loop)
@@ -69,6 +71,9 @@ private:
     String  _lat;
     String  _lon;
     int32_t _tzOffsetSec    = 0;
+
+    ForecastDay _forecast[3]     = {};
+    uint8_t     _forecastCount   = 0;
 
     uint32_t   _lastWeatherMs   = 0;
     uint32_t   _lastTimeMs      = 0;

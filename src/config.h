@@ -77,12 +77,20 @@ static const Expression CYCLE_EXPRS[CYCLE_COUNT] = {
     EXPR_SAD,   EXPR_SLEEPY,  EXPR_ANGRY, EXPR_HAPPY
 };
 
+// ─── Forecast ────────────────────────────────────────────────────────────────
+struct ForecastDay {
+    char  label[8];    // "Today", "Mon", "Tue", etc.
+    float maxTempC;    // max temperature in Celsius; -99 = no data
+    char  desc[12];    // "Clear", "Rain", etc.
+};
+
 // ─── Info Screens ────────────────────────────────────────────────────────────
 enum InfoScreen : uint8_t {
-    INFO_CLOCK    = 0,
-    INFO_NETWORK  = 1,
-    INFO_FIRMWARE = 2,
-    INFO_COUNT    = 3
+    INFO_CLOCK     = 0,
+    INFO_FORECAST  = 1,
+    INFO_NETWORK   = 2,
+    INFO_FIRMWARE  = 3,
+    INFO_COUNT     = 4
 };
 
 // ─── Touch Events ────────────────────────────────────────────────────────────

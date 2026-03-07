@@ -42,6 +42,7 @@ public:
                        bool useFahrenheit = true);
     void showInfoNetwork(bool wifiOk, const char* ip, int rssi, bool apMode);
     void showInfoFirmware(uint32_t uptimeSec);
+    void showInfoForecast(const ForecastDay* days, uint8_t count, bool useFahrenheit = true);
 
     // ── Called every loop() ─────────────────────────────────────────────────
     void update();

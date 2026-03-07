@@ -21,7 +21,8 @@ public:
     void begin();
     void play(BuzzPattern pattern);
     void stop();
-    void update();  // must be called every loop()
+    void update();        // must be called every loop()
+    bool isPlaying() const { return _active; }
 
 private:
     bool              _active      = false;

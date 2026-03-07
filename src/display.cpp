@@ -479,6 +479,65 @@ void DisplayManager::showInfoFirmware(uint32_t uptimeSec) {
     _disp.display();
 }
 
+void DisplayManager::showInfoForecast(const ForecastDay* days, uint8_t count,
+                                      bool useFahrenheit) {
+    _disp.clearDisplay();
+    _disp.setTextColor(SSD1306_WHITE);
+    centreText("Forecast", 0, 1);
+    _disp.drawFastHLine(0, 9, OLED_W, SSD1306_WHITE);
+
+    if (count == 0) {
+        centreText("No data", 30, 1);
+        _disp.display();
+        return;
+    }
+
+    // Two vertical dividers splitting 128px into three 42px columns
+    // Col 0: x=0..41  centre=20
+    // Col 1: x=43..84 centre=63
+    // Col 2: x=86..127 centre=106
+    _disp.drawFastVLine(42,  10, 54, SSD1306_WHITE);
+    _disp.drawFastVLine(85,  10, 54, SSD1306_WHITE);
+
+    static const int8_t cx[3] = {20, 63, 106};
+
+    _disp.setTextSize(1);
+    for (uint8_t i = 0; i < count && i < 3; i++) {
+        int16_t bx, by; uint16_t bw, bh;
+
+        // Day label (centred in column)
+        _disp.getTextBounds(days[i].label, 0, 0, &bx, &by, &bw, &bh);
+        _disp.setCursor(cx[i] - (int)(bw / 2), 11);
+        _disp.print(days[i].label);
+
+        // Weather icon
+        drawWeatherIcon(cx[i], 30, days[i].desc);
+
+        // Max temperature
+        char tempStr[8];
+        if (days[i].maxTempC > -90.0f) {
+            if (useFahrenheit) {
+                int tf = (int)((days[i].maxTempC * 9.0f / 5.0f) + 32.5f);
+                snprintf(tempStr, sizeof(tempStr), "%dF", tf);
+            } else {
+                snprintf(tempStr, sizeof(tempStr), "%dC", (int)(days[i].maxTempC + 0.5f));
+            }
+        } else {
+            snprintf(tempStr, sizeof(tempStr), "--");
+        }
+        _disp.getTextBounds(tempStr, 0, 0, &bx, &by, &bw, &bh);
+        _disp.setCursor(cx[i] - (int)(bw / 2), 44);
+        _disp.print(tempStr);
+
+        // Condition description
+        _disp.getTextBounds(days[i].desc, 0, 0, &bx, &by, &bw, &bh);
+        _disp.setCursor(cx[i] - (int)(bw / 2), 55);
+        _disp.print(days[i].desc);
+    }
+
+    _disp.display();
+}
+
 // ─── Utility ──────────────────────────────────────────────────────────────────
 void DisplayManager::centreText(const char* str, int y, uint8_t size) {
     _disp.setTextSize(size);
