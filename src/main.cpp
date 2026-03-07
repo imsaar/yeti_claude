@@ -169,8 +169,8 @@ static void handleFaceState(TouchEvent evt) {
             loveReturning = true;
             loveStartMs   = millis();
             disp.transitionTo(EXPR_LOVE);
-            buzz.play(BUZZ_LONG_PRESS);
-            motor.play(VIBE_LONG_PRESS);
+            buzz.play(BUZZ_STARWARS);
+            motor.play(VIBE_STARWARS);
             Serial.println("[FACE] Love!");
             break;
 

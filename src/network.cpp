@@ -34,8 +34,13 @@ void NetworkManager::update() {
     uint32_t now = millis();
     if (!_apMode && _wifiConnected) {
         if (WiFi.status() != WL_CONNECTED) {
-            Serial.println("[NET] WiFi connection lost!");
+            Serial.printf("[NET] WiFi connection lost! Last RSSI: %d dBm\n", (int)WiFi.RSSI());
             _wifiConnected = false;
+        }
+        // Periodic RSSI heartbeat (every 10 s) for antenna diagnostics
+        if (now - _lastRssiLogMs >= 10000) {
+            _lastRssiLogMs = now;
+            Serial.printf("[NET] RSSI: %d dBm  Ch: %d\n", (int)WiFi.RSSI(), (int)WiFi.channel());
         }
         if (now - _lastTimeMs >= 1000) {
             _lastTimeMs = now;
@@ -53,28 +58,76 @@ void NetworkManager::startAPMode() {
     _apMode = true;
     WiFi.mode(WIFI_AP);
     WiFi.softAP(AP_SSID, AP_PASS);
-    snprintf(_localIP, sizeof(_localIP), "192.168.4.1");
-    Serial.printf("[NET] AP mode: SSID=%s IP=%s\n", AP_SSID, _localIP);
+    IPAddress ip = WiFi.softAPIP();
+    snprintf(_localIP, sizeof(_localIP), "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+    Serial.println("[NET] === Soft AP mode ===");
+    Serial.printf("[NET]   SSID:    %s\n",  AP_SSID);
+    Serial.printf("[NET]   Pass:    %s\n",  AP_PASS);
+    Serial.printf("[NET]   IP:      %s\n",  _localIP);
+    Serial.printf("[NET]   MAC:     %s\n",  WiFi.softAPmacAddress().c_str());
+    Serial.printf("[NET]   Channel: %d\n",  WiFi.channel());
+    Serial.printf("[NET]   TxPower: %d dBm\n", (int)WiFi.getTxPower());
 }
 
 void NetworkManager::startSTA() {
     _apMode = false;
     WiFi.mode(WIFI_STA);
     WiFi.setHostname(HOSTNAME);
-    WiFi.begin(_ssid.c_str(), _pass.c_str());
-    Serial.printf("[NET] Connecting to %s …\n", _ssid.c_str());
-    uint32_t start = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
-        delay(300); Serial.print('.');
+
+    // ── Pre-connect scan: diagnose antenna / environment ──────────────────────
+    Serial.println("[NET] Scanning for WiFi networks…");
+    int n = WiFi.scanNetworks();
+    if (n == 0) {
+        Serial.println("[NET]   No networks found — possible antenna issue!");
+    } else {
+        Serial.printf("[NET]   %d network(s) found:\n", n);
+        for (int i = 0; i < n; i++) {
+            bool isTarget = (WiFi.SSID(i) == _ssid);
+            Serial.printf("[NET]   %2d: RSSI=%4d dBm  Ch=%2d  %-32s%s\n",
+                i + 1,
+                (int)WiFi.RSSI(i),
+                (int)WiFi.channel(i),
+                WiFi.SSID(i).c_str(),
+                isTarget ? "  ← TARGET" : "");
+        }
     }
+    WiFi.scanDelete();
+
+    // ── Connect ───────────────────────────────────────────────────────────────
+    Serial.printf("[NET] Connecting to SSID: %s\n", _ssid.c_str());
+    Serial.printf("[NET]   STA MAC: %s\n", WiFi.macAddress().c_str());
+    Serial.printf("[NET]   TxPower: %d dBm\n", (int)WiFi.getTxPower());
+    WiFi.begin(_ssid.c_str(), _pass.c_str());
+
+    uint32_t start = millis();
+    int      prevStatus = -1;
+    while (WiFi.status() != WL_CONNECTED && millis() - start < 15000) {
+        delay(300);
+        int s = (int)WiFi.status();
+        if (s != prevStatus) {
+            // Status codes: 0=IDLE 1=NO_SSID 3=CONNECTED 4=CONNECT_FAILED 6=DISCONNECTED
+            Serial.printf("[NET]   status=%d  t=%us\n", s, (unsigned)((millis() - start) / 1000));
+            prevStatus = s;
+        } else {
+            Serial.print('.');
+        }
+    }
+    Serial.println();
+
     if (WiFi.status() == WL_CONNECTED) {
         _wifiConnected = true;
         strncpy(_localIP, WiFi.localIP().toString().c_str(), sizeof(_localIP) - 1);
-        Serial.printf("\n[NET] Connected! IP: %s\n", _localIP);
+        Serial.println("[NET] === Connected ===");
+        Serial.printf("[NET]   IP:      %s\n", _localIP);
+        Serial.printf("[NET]   Gateway: %s\n", WiFi.gatewayIP().toString().c_str());
+        Serial.printf("[NET]   BSSID:   %s\n", WiFi.BSSIDstr().c_str());
+        Serial.printf("[NET]   Channel: %d\n", (int)WiFi.channel());
+        Serial.printf("[NET]   RSSI:    %d dBm\n", (int)WiFi.RSSI());
+        Serial.printf("[NET]   TxPower: %d dBm\n", (int)WiFi.getTxPower());
         setupMDNS();
         configTime(_tzOffsetSec, 0, NTP_SERVER, "time.google.com");
     } else {
-        Serial.println("\n[NET] Failed to connect → offline mode");
+        Serial.printf("[NET] Failed to connect (status=%d) → offline mode\n", (int)WiFi.status());
         _wifiConnected = false;
     }
 }

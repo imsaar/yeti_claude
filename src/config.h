@@ -101,6 +101,7 @@ enum VibePattern : uint8_t {
     VIBE_DOUBLE_TAP,  // two pulses on double-tap
     VIBE_LONG_PRESS,  // strong long pulse on long-press
     VIBE_ALERT,       // three rapid pulses
+    VIBE_STARWARS,    // vibrates in sync with Star Wars theme
 };
 
 // ─── Buzzer Patterns ─────────────────────────────────────────────────────────

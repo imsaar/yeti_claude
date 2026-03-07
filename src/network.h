@@ -72,6 +72,7 @@ private:
 
     uint32_t   _lastWeatherMs   = 0;
     uint32_t   _lastTimeMs      = 0;
+    uint32_t   _lastRssiLogMs   = 0;
     TouchEvent  _simulatedEvent       = TOUCH_NONE;
     int8_t      _pendingExpression    = -1;
     BuzzPattern _pendingBuzzPattern   = BUZZ_NONE;
