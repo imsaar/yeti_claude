@@ -9,8 +9,11 @@ The enclosure is the [Compagnon 309 by Leroyd](https://makerworld.com) on MakerW
 ## Features
 
 - **Animated face** — 11 expressions (happy, sad, angry, surprised, love, sleepy, dead, wink, and more) rendered geometrically with smooth blink transitions
-- **Touch gestures** — single tap cycles expressions, double tap opens info screens, long press triggers a love expression
+- **Touch gestures** — single tap cycles expressions, double tap opens info screens, long press triggers love mode with Star Wars theme
+- **Piezo buzzer** — non-blocking tone sequencer with boot chime, tap clicks, and Star Wars main theme on long press
+- **Haptic feedback** — vibration motor pulses in sync with buzzer patterns, including the Star Wars rhythm
 - **Live weather** — fetches current temperature and conditions from [Open-Meteo](https://open-meteo.com) (free, no API key). Support for **Fahrenheit or Celsius**.
+- **3-day forecast** — daily max temperature and weather condition for the next 3 days
 - **NTP clock** — syncs time on boot, configurable UTC offset
 - **Local web UI** — configure WiFi, location, timezone, and units at `http://yeti.local`
 - **Offline mode** — full gesture and expression support even without WiFi
@@ -120,7 +123,7 @@ To re-enter setup mode from the device: double-tap to open info screens → sing
 |---|---|---|
 | Single tap | Advance to next expression | Advance to next info screen |
 | Double tap | Open info screens | Return to face mode |
-| Long press (3 s) | Show love expression for 3 s | Restart in AP setup mode (Network screen only) |
+| Long press (3 s) | Show love expression + play Star Wars theme (holds until music ends) | Restart in AP setup mode (Network screen only) |
 
 ---
 
@@ -145,22 +148,32 @@ Idle animations run continuously: eyes blink every ~3.5 s, pupils wander every ~
 
 ## Info Screens
 
-Double-tap from face mode to enter info mode. Single-tap to cycle through three screens.
+Double-tap from face mode to enter info mode. Single-tap to cycle through four screens.
 
 **Screen 1 — Clock & Weather**
-Displays time and date synced via NTP, alongside current temperature and weather icons.
+Displays time and date synced via NTP, alongside current temperature and weather icon.
 
 ```
          14:35
        Sat 22 Feb
      72F    [ ICON ]
 ```
-- **Large Temp:** Rounded Fahrenheit or Celsius temperature displayed in the bottom-left (configurable).
-- **Weather Icons:** Custom-drawn icons for Clear (Sun), Cloudy, Rain, Snow, Storm, and Fog.
-- **NTP Sync:** Robust time synchronization with fallback servers.
+- **Large Temp:** Rounded Fahrenheit or Celsius temperature (configurable).
+- **Weather Icons:** Custom-drawn icons for Clear, Cloudy, Rain, Snow, Storm, and Fog.
 
+**Screen 2 — 3-Day Forecast**
+Three-column layout showing the max temperature and weather condition for today and the next two days.
 
-**Screen 2 — Network**
+```
+        Forecast
+────────────────────────────
+ Today  |  Mon   |  Tue
+  ☀️    |  🌧️   |  ☁️
+  72F   |  65F   |  70F
+ Clear  |  Rain  | Cloudy
+```
+
+**Screen 3 — Network**
 ```
 Network
 ────────────────────────────
@@ -170,7 +183,7 @@ RSSI: -54 dBm
 http://yeti.local
 ```
 
-**Screen 3 — Firmware**
+**Screen 4 — Firmware**
 ```
 Firmware
 ────────────────────────────
@@ -186,11 +199,14 @@ Info mode auto-exits to face mode after 30 seconds of no interaction.
 
 ## Web API
 
-| Route | Method | Description |
-|---|---|---|
-| `/` | GET | Config page (pre-filled from current settings) |
-| `/save` | POST | Save settings to NVS and reboot |
-| `/api/status` | GET | JSON with WiFi status, IP, RSSI, temp, weather, time, unit preference (`faren`), and stored coordinates |
+| Route | Method | Body param | Description |
+|---|---|---|---|
+| `/` | GET | — | Config page (pre-filled from current settings) |
+| `/save` | POST | `ssid`, `pass`, `lat`, `lon`, `tz`, `faren` | Save settings to NVS and reboot |
+| `/api/status` | GET | — | JSON with WiFi status, IP, RSSI, temp, weather, time, unit preference, and stored coordinates |
+| `/api/simulate` | POST | `event=single\|double\|long` | Inject a touch event |
+| `/api/expression` | POST | `expr=0..10` | Set face expression directly |
+| `/api/buzz` | POST | `pattern=boot\|tap\|double\|long\|happy\|sad\|alert\|starwars` | Trigger a buzzer pattern |
 
 ---
 
@@ -232,12 +248,14 @@ Info mode auto-exits to face mode after 30 seconds of no interaction.
 
 ```
 src/
-├── main.cpp      — State machine, loop(), touch dispatch
-├── config.h      — Pin numbers, timing constants, enums
-├── display.h/.cpp — DisplayManager: face rendering, animations
-├── touch.h/.cpp  — TouchHandler: gesture classification
-└── network.h/.cpp — NetworkManager: WiFi, NTP, weather, web server
-platformio.ini    — Build configuration
+├── main.cpp        — State machine, loop(), touch dispatch
+├── config.h        — Pin numbers, timing constants, enums, ForecastDay struct
+├── display.h/.cpp  — DisplayManager: face rendering, info screens, animations
+├── touch.h/.cpp    — TouchHandler: gesture classification
+├── network.h/.cpp  — NetworkManager: WiFi, NTP, weather + 3-day forecast, web server
+├── buzzer.h/.cpp   — BuzzerManager: non-blocking tone sequencer (LEDC)
+└── motor.h/.cpp    — MotorManager: non-blocking vibration motor driver
+platformio.ini      — Build configuration
 ```
 
 ---

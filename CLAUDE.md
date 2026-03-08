@@ -70,7 +70,7 @@ STATE_INFO  → STATE_SETUP_AP (long-press on network screen)
 
 ### Module Responsibilities
 
-**`config.h`** — Single source of truth for all pin numbers, timing constants (`SLEEP_TIMEOUT_MS`, `LONG_PRESS_MS`, etc.), and all enum types (`AppState`, `Expression`, `InfoScreen`, `TouchEvent`). Change hardware pins or timing here only.
+**`config.h`** — Single source of truth for all pin numbers, timing constants (`SLEEP_TIMEOUT_MS`, `LONG_PRESS_MS`, etc.), all enum types (`AppState`, `Expression`, `InfoScreen`, `TouchEvent`, `BuzzPattern`, `VibePattern`), and the `ForecastDay` struct. Change hardware pins or timing here only.
 
 **`display.h/.cpp`** — `DisplayManager` owns the `Adafruit_SSD1306` instance. All face rendering is purely geometric (no bitmaps): filled circles clipped with black rectangles simulate eyelids, `drawMouth()` draws a 4-segment polyline smile/frown, triangles build hearts, crossed lines make X-eyes. The `FACE_DATA[]` table (indexed by `Expression` enum) stores `FaceParams{EyeParams left, right; int8_t brow, mouth}` for each expression. `transitionTo()` triggers a blink-in/blink-out animation via `updateAnimation()` which lerps between `FACE_DATA[_current]`, `FACE_DATA[EXPR_BLINK]`, and `FACE_DATA[_target]`. `doIdleAnimations()` handles periodic blinks (non-blocking, flag-based) and pupil wandering.
 
@@ -81,9 +81,14 @@ STATE_INFO  → STATE_SETUP_AP (long-press on network screen)
 - First boot with no `ssid` → `startAPMode()` (SSID: `YETI Setup`, IP: `192.168.4.1`)
 - Normal boot → `startSTA()` → mDNS at `yeti.local`
 - `update()` is non-blocking: `_server.handleClient()` + second-tick time update + weather fetch gated by `WEATHER_INTERVAL_MS`
-- Weather from Open-Meteo REST API (no API key), WMO weather codes mapped to short strings
+- Weather from Open-Meteo REST API (no API key), WMO weather codes mapped to short strings via `wmoToDesc()`
+- Also fetches 3-day daily forecast (`temperature_2m_max`, `weather_code`) stored as `ForecastDay _forecast[3]`; exposed via `getForecast()` / `getForecastCount()`
 - NTP via `configTime(_tzOffsetSec, 0, NTP_SERVER)` — timezone offset stored as raw seconds in NVS
 - `fetchWeather()` is called immediately on first `update()` because `_lastWeatherMs` initialises to `0`
+
+**`buzzer.h/.cpp`** — `BuzzerManager` drives the piezo buzzer via LEDC (channel 0). Non-blocking: call `play(BuzzPattern)` to start, `update()` every loop. `isPlaying()` returns true while a sequence is active. Patterns defined as `BuzzNote[]` arrays (`{freq_Hz, duration_ms}`; `ms=0` = end marker, `freq=0` = rest).
+
+**`motor.h/.cpp`** — `MotorManager` drives the vibration motor (GPIO10, active-HIGH, digital). Non-blocking: same `play(VibePattern)` / `update()` / `stop()` interface. `VIBE_STARWARS` mirrors the Star Wars buzzer note durations so haptic pulses sync with the melody.
 
 ### Adding a New Expression
 
@@ -93,13 +98,16 @@ STATE_INFO  → STATE_SETUP_AP (long-press on network screen)
 
 ### Adding a New Info Screen
 
-1. Add entry to `InfoScreen` enum in `config.h`, increment `INFO_COUNT`
+1. Add entry to `InfoScreen` enum in `config.h`, increment `INFO_COUNT` (currently 4: `INFO_CLOCK`, `INFO_FORECAST`, `INFO_NETWORK`, `INFO_FIRMWARE`)
 2. Add a `case` in `refreshInfoDisplay()` in `main.cpp`
 3. Add a `showInfo*()` method to `DisplayManager`
 
 ### Web Interface
 
-The config page HTML is embedded as a `PROGMEM` string in `network.cpp` (variable `CONFIG_HTML`). The web server routes are:
+The config page HTML is built dynamically in `handleRoot()` in `network.cpp`; the CSS is a separate `PROGMEM` string served at `/s.css`. The web server routes are:
 - `GET /` → config page
 - `POST /save` → saves all fields to NVS then calls `ESP.restart()`
 - `GET /api/status` → JSON with current WiFi, weather, time, and stored config
+- `POST /api/simulate` → inject touch event (`event=single|double|long`)
+- `POST /api/expression` → set face expression directly (`expr=0..10`)
+- `POST /api/buzz` → trigger buzzer pattern (`pattern=boot|tap|double|long|happy|sad|alert|starwars`)
