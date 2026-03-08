@@ -25,6 +25,7 @@ private:
     bool     _wasPressed     = false;
     uint32_t _pressStart     = 0;
     uint8_t  _tapCount       = 0;
+    bool     _mediumFired    = false;   // prevent repeated medium-press events
     bool     _longFired      = false;   // prevent repeated long-press events
     bool     _pendingSingle  = false;   // single tap is "pending" until double-tap window closes
     uint32_t _pendingStart   = 0;

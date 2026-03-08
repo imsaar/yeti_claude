@@ -4,6 +4,7 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Preferences.h>
+#include <functional>
 #include "config.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,9 +38,16 @@ public:
     int         getRSSI()      const;
     const char* getTimeStr()   const { return _timeStr;     }
     const char* getDateStr()   const { return _dateStr;     }
-    float       getTemperature() const { return _tempC;     }
-    const char* getWeatherDesc() const { return _weatherDesc; }
-    bool        useFahrenheit()  const { return _useFahrenheit; }
+    float       getTemperature()    const { return _tempC;        }
+    const char* getWeatherDesc()    const { return _weatherDesc;  }
+    bool        useFahrenheit()     const { return _useFahrenheit; }
+    const ForecastDay* getForecast()      const { return _forecast;      }
+    uint8_t            getForecastCount() const { return _forecastCount;  }
+
+    // ── OTA callbacks ───────────────────────────────────────────────────────
+    // Called with 0–100 during firmware upload; called with result on finish
+    void setOtaProgressCallback(std::function<void(uint8_t)> cb) { _otaProgressCb = cb; }
+    void setOtaResultCallback(std::function<void(bool)> cb)      { _otaResultCb   = cb; }
 
     // ── Simulation ──────────────────────────────────────────────────────────
     // Returns any pending simulated touch event and clears it (call each loop)
@@ -70,11 +78,19 @@ private:
     String  _lon;
     int32_t _tzOffsetSec    = 0;
 
+    ForecastDay _forecast[3]     = {};
+    uint8_t     _forecastCount   = 0;
+
     uint32_t   _lastWeatherMs   = 0;
     uint32_t   _lastTimeMs      = 0;
+    uint32_t   _lastRssiLogMs   = 0;
     TouchEvent  _simulatedEvent       = TOUCH_NONE;
     int8_t      _pendingExpression    = -1;
     BuzzPattern _pendingBuzzPattern   = BUZZ_NONE;
+
+    std::function<void(uint8_t)> _otaProgressCb;
+    std::function<void(bool)>    _otaResultCb;
+    uint32_t _otaBytesWritten   = 0;
 
     void connectWiFi();
     void startSTA();
@@ -90,6 +106,9 @@ private:
     void handleSimulate();
     void handleApiExpression();
     void handleApiBuzz();
+    void handleOtaPage();
+    void handleOtaComplete();
+    void handleOtaUpload();
     void handleStyle();
     void handleNotFound();
 };

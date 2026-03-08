@@ -60,6 +60,9 @@ const FaceParams FACE_DATA[EXPR_COUNT] = {
 
     // EXPR_WINK_R – left squinted, right closed, slight smile
     { {5, 0,  0,  0, 0}, {26,0,  0,  0, 0},  0,   7 },
+
+    // EXPR_PURR  – very squinted lids, "purrrr" text at mouth (mouth=30 is special text value)
+    { {12, 0,  0,  2, 0}, {12, 0,  0,  2, 0},  0,  30 },
 };
 
 // ─── Constructor / begin ─────────────────────────────────────────────────────
@@ -292,8 +295,19 @@ void DisplayManager::drawBrow(int cx, int cy, int8_t brow, bool isLeft) {
 // Uses a 4-segment polyline to approximate a parabolic smile / frown.
 // mouth > 0 = smile (curves downward), mouth < 0 = frown (curves upward)
 // mouth == 20 = surprised open circle
+// mouth == 30 = "purrrr" text (purr expression)
 void DisplayManager::drawMouth(int cx, int cy, int8_t mouth) {
     if (mouth == 0) return;
+
+    if (mouth == 30) {
+        _disp.setTextSize(1);
+        _disp.setTextColor(SSD1306_WHITE);
+        int16_t bx, by; uint16_t bw, bh;
+        _disp.getTextBounds("purrrr", 0, 0, &bx, &by, &bw, &bh);
+        _disp.setCursor(cx - (int16_t)(bw / 2), cy - (int16_t)(bh / 2));
+        _disp.print("purrrr");
+        return;
+    }
 
     if (mouth >= 20) {
         // Surprised O
@@ -486,6 +500,99 @@ void DisplayManager::showInfoFirmware(uint32_t uptimeSec) {
     snprintf(uptime, sizeof(uptime), "Up: %uh %02um %02us", (unsigned)h, (unsigned)m, (unsigned)s);
     _disp.setCursor(0, 34); _disp.print(uptime);
     _disp.setCursor(0, 44); _disp.print("Touch: GPIO"); _disp.print(TOUCH_PIN);
+    _disp.display();
+}
+
+void DisplayManager::showInfoForecast(const ForecastDay* days, uint8_t count,
+                                      bool useFahrenheit) {
+    _disp.clearDisplay();
+    _disp.setTextColor(SSD1306_WHITE);
+    centreText("Forecast", 0, 1);
+    _disp.drawFastHLine(0, 9, OLED_W, SSD1306_WHITE);
+
+    if (count == 0) {
+        centreText("No data", 30, 1);
+        _disp.display();
+        return;
+    }
+
+    // Two vertical dividers splitting 128px into three 42px columns
+    // Col 0: x=0..41  centre=20
+    // Col 1: x=43..84 centre=63
+    // Col 2: x=86..127 centre=106
+    _disp.drawFastVLine(42,  10, 54, SSD1306_WHITE);
+    _disp.drawFastVLine(85,  10, 54, SSD1306_WHITE);
+
+    static const int8_t cx[3] = {20, 63, 106};
+
+    _disp.setTextSize(1);
+    for (uint8_t i = 0; i < count && i < 3; i++) {
+        int16_t bx, by; uint16_t bw, bh;
+
+        // Day label (centred in column)
+        _disp.getTextBounds(days[i].label, 0, 0, &bx, &by, &bw, &bh);
+        _disp.setCursor(cx[i] - (int)(bw / 2), 11);
+        _disp.print(days[i].label);
+
+        // Weather icon
+        drawWeatherIcon(cx[i], 30, days[i].desc);
+
+        // Max temperature
+        char tempStr[8];
+        if (days[i].maxTempC > -90.0f) {
+            if (useFahrenheit) {
+                int tf = (int)((days[i].maxTempC * 9.0f / 5.0f) + 32.5f);
+                snprintf(tempStr, sizeof(tempStr), "%dF", tf);
+            } else {
+                snprintf(tempStr, sizeof(tempStr), "%dC", (int)(days[i].maxTempC + 0.5f));
+            }
+        } else {
+            snprintf(tempStr, sizeof(tempStr), "--");
+        }
+        _disp.getTextBounds(tempStr, 0, 0, &bx, &by, &bw, &bh);
+        _disp.setCursor(cx[i] - (int)(bw / 2), 44);
+        _disp.print(tempStr);
+
+        // Condition description
+        _disp.getTextBounds(days[i].desc, 0, 0, &bx, &by, &bw, &bh);
+        _disp.setCursor(cx[i] - (int)(bw / 2), 55);
+        _disp.print(days[i].desc);
+    }
+
+    _disp.display();
+}
+
+// ─── OTA screens ──────────────────────────────────────────────────────────────
+void DisplayManager::showOtaProgress(uint8_t pct) {
+    _disp.clearDisplay();
+    _disp.setTextColor(SSD1306_WHITE);
+    centreText("OTA Update", 4, 1);
+    _disp.drawFastHLine(0, 15, OLED_W, SSD1306_WHITE);
+
+    // Progress bar outline
+    _disp.drawRect(10, 30, 108, 12, SSD1306_WHITE);
+    // Fill proportional to pct
+    if (pct > 0) {
+        uint8_t fill = (uint8_t)((pct * 104UL) / 100);
+        _disp.fillRect(12, 32, fill, 8, SSD1306_WHITE);
+    }
+
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%u%%", (unsigned)pct);
+    centreText(buf, 48, 1);
+    _disp.display();
+}
+
+void DisplayManager::showOtaResult(bool ok) {
+    _disp.clearDisplay();
+    _disp.setTextColor(SSD1306_WHITE);
+    if (ok) {
+        centreText("Update OK!", 18, 1);
+        centreText("Rebooting...", 32, 1);
+    } else {
+        centreText("Update FAILED", 18, 1);
+        centreText("Check serial log", 32, 1);
+    }
     _disp.display();
 }
 
