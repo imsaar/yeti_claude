@@ -123,6 +123,7 @@ To re-enter setup mode from the device: double-tap to open info screens → sing
 |---|---|---|
 | Single tap | Advance to next expression | Advance to next info screen |
 | Double tap | Open info screens | Return to face mode |
+| Medium press (~1 s) | Show purr expression + play purr sound (holds until sound ends) | — |
 | Long press (3 s) | Show love expression + play Star Wars theme (holds until music ends) | Restart in AP setup mode (Network screen only) |
 
 ---
@@ -141,6 +142,7 @@ To re-enter setup mode from the device: double-tap to open info screens → sing
 | Dead | Eyes replaced with X shapes | Yes |
 | Blink | Fully closed (transition only) | No |
 | Wink L / Wink R | One eye closed | No |
+| Purr | Heavy squinted eyes, pupils down, content smile | No |
 
 Idle animations run continuously: eyes blink every ~3.5 s, pupils wander every ~8 s. Expressions auto-cycle every 2 minutes.
 
@@ -197,16 +199,35 @@ Info mode auto-exits to face mode after 30 seconds of no interaction.
 
 ---
 
+## OTA Firmware Update
+
+Once YETI is connected to WiFi you can update the firmware without a USB cable.
+
+1. Build the firmware binary:
+   ```bash
+   pio run
+   ```
+2. Open `http://yeti.local/update` in a browser (also linked from the bottom of the config page).
+3. Click **Choose File**, select `.pio/build/yeti/firmware.bin`, then click **Upload & Flash**.
+4. YETI shows a progress bar on its OLED while the binary is being written.
+5. On success the display shows "Update OK!" and YETI reboots automatically.
+
+> **Tip:** If `yeti.local` doesn't resolve, find the IP address on the Network info screen (double-tap → single-tap twice) and navigate to `http://<IP>/update`.
+
+---
+
 ## Web API
 
 | Route | Method | Body param | Description |
 |---|---|---|---|
 | `/` | GET | — | Config page (pre-filled from current settings) |
 | `/save` | POST | `ssid`, `pass`, `lat`, `lon`, `tz`, `faren` | Save settings to NVS and reboot |
+| `/update` | GET | — | OTA firmware upload page |
+| `/update` | POST | multipart `firmware` (.bin) | Flash new firmware and reboot |
 | `/api/status` | GET | — | JSON with WiFi status, IP, RSSI, temp, weather, time, unit preference, and stored coordinates |
-| `/api/simulate` | POST | `event=single\|double\|long` | Inject a touch event |
+| `/api/simulate` | POST | `event=single\|double\|medium\|long` | Inject a touch event |
 | `/api/expression` | POST | `expr=0..10` | Set face expression directly |
-| `/api/buzz` | POST | `pattern=boot\|tap\|double\|long\|happy\|sad\|alert\|starwars` | Trigger a buzzer pattern |
+| `/api/buzz` | POST | `pattern=boot\|tap\|double\|long\|happy\|sad\|alert\|starwars\|purr` | Trigger a buzzer pattern |
 
 ---
 

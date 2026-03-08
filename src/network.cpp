@@ -5,6 +5,8 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
+#include <Update.h>
+#include <StreamString.h>
 #include <time.h>
 #include "network.h"
 
@@ -144,6 +146,10 @@ void NetworkManager::setupWebServer() {
     _server.on("/api/simulate",  HTTP_POST, [this]() { handleSimulate(); });
     _server.on("/api/expression",HTTP_POST, [this]() { handleApiExpression(); });
     _server.on("/api/buzz",      HTTP_POST, [this]() { handleApiBuzz(); });
+    _server.on("/update",        HTTP_GET,  [this]() { handleOtaPage(); });
+    _server.on("/update",        HTTP_POST,
+        [this]() { handleOtaComplete(); },
+        [this]() { handleOtaUpload(); });
     _server.on("/favicon.ico",   HTTP_GET,  [this]() { _server.send(204, "text/plain", ""); });
     _server.onNotFound([this]() { handleNotFound(); });
     _server.begin();
@@ -241,8 +247,9 @@ void NetworkManager::handleRoot() {
     html += R"rawhtml(</div></div><div class="S"><h2>Simulation</h2><form method="POST" action="/api/simulate" class="SR">
 <button name="event" value="single" class="sb">Single</button>
 <button name="event" value="double" class="sb">Double</button>
+<button name="event" value="medium" class="sb">Medium</button>
 <button name="event" value="long" class="sb">Long</button>
-</form><p class="ht">Single=next &bull; Double=info &bull; Long=love</p></div><div class="S"><h2>Buzzer</h2><form method="POST" action="/api/buzz"><div class="SR">
+</form><p class="ht">Single=next &bull; Double=info &bull; Medium=purr &bull; Long=love</p></div><div class="S"><h2>Buzzer</h2><form method="POST" action="/api/buzz"><div class="SR">
 <button name="pattern" value="boot" class="sb">Boot</button>
 <button name="pattern" value="tap" class="sb">Tap</button>
 <button name="pattern" value="double" class="sb">Double</button>
@@ -252,10 +259,11 @@ void NetworkManager::handleRoot() {
 <button name="pattern" value="sad" class="sb">Sad</button>
 <button name="pattern" value="alert" class="sb">Alert</button>
 <button name="pattern" value="starwars" class="sb">&#9733; Star Wars</button>
+<button name="pattern" value="purr" class="sb">Purr</button>
 </div></form></div><div class="S"><h2>Expression</h2><form method="POST" action="/api/expression" class="FG">)rawhtml";
 
-    static const char* expr_names[] = {"Happy","Neutral","Sad","Surprised","Love","Sleepy","Angry","Dead","Blink","Wink L","Wink R"};
-    for (int i = 0; i < 11; i++) {
+    static const char* expr_names[] = {"Happy","Neutral","Sad","Surprised","Love","Sleepy","Angry","Dead","Blink","Wink L","Wink R","Purr"};
+    for (int i = 0; i < 12; i++) {
         html += "<button name=\"expr\" value=\"";
         html += String(i);
         html += "\" class=\"fb\">";
@@ -263,7 +271,10 @@ void NetworkManager::handleRoot() {
         html += "</button>";
     }
 
-    html += R"rawhtml(</form></div></div></div></div></body></html>)rawhtml";
+    html += R"rawhtml(</form></div></div></div>
+<div class="S" style="text-align:center">
+<a href="/update" style="color:#6af;font-size:.85rem">⬆ OTA Firmware Update</a>
+</div></div></body></html>)rawhtml";
     _server.sendHeader("Cache-Control", "no-cache");
     _server.send(200, "text/html", html);
 }
@@ -308,6 +319,7 @@ void NetworkManager::handleSimulate() {
     String evt = _server.arg("event");
     if      (evt == "single") _simulatedEvent = TOUCH_SINGLE;
     else if (evt == "double") _simulatedEvent = TOUCH_DOUBLE;
+    else if (evt == "medium") _simulatedEvent = TOUCH_MEDIUM;
     else if (evt == "long")   _simulatedEvent = TOUCH_LONG;
     _server.sendHeader("Location", "/");
     _server.send(302, "text/plain", "");
@@ -334,8 +346,81 @@ void NetworkManager::handleApiBuzz() {
     else if (p == "sad")    _pendingBuzzPattern = BUZZ_SAD;
     else if (p == "alert")    _pendingBuzzPattern = BUZZ_ALERT;
     else if (p == "starwars") _pendingBuzzPattern = BUZZ_STARWARS;
+    else if (p == "purr")     _pendingBuzzPattern = BUZZ_PURR;
     _server.sendHeader("Location", "/");
     _server.send(302, "text/plain", "");
+}
+
+void NetworkManager::handleOtaPage() {
+    static const char html[] PROGMEM = R"rawhtml(<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YETI OTA</title><link rel="stylesheet" href="/s.css"></head><body><div class="W">
+<h1>🧊 <span>YETI</span> OTA Update</h1>
+<p style="color:#aaa;margin-bottom:1.5rem;text-align:center">Upload a PlatformIO <code>.pio/build/yeti/firmware.bin</code> to flash new firmware.</p>
+<form method="POST" action="/update" enctype="multipart/form-data">
+<label>Firmware binary (.bin)</label>
+<input type="file" name="firmware" accept=".bin" required style="margin-bottom:1rem">
+<button type="submit">Upload &amp; Flash</button>
+</form>
+<p style="margin-top:1rem;text-align:center"><a href="/" style="color:#6af">← Back to Config</a></p>
+</div></body></html>)rawhtml";
+    _server.sendHeader("Cache-Control", "no-cache");
+    _server.send_P(200, "text/html", html);
+}
+
+void NetworkManager::handleOtaComplete() {
+    bool ok = !Update.hasError();
+    Serial.printf("[OTA] Upload complete — %s\n", ok ? "OK" : "FAILED");
+    if (_otaResultCb) _otaResultCb(ok);
+    if (ok) {
+        _server.send(200, "text/html",
+            "<html><body style='font-family:system-ui;background:#111;color:#eee;"
+            "display:flex;justify-content:center;align-items:center;height:100vh'>"
+            "<div style='text-align:center'><h2 style='color:#6af'>✅ Update OK!</h2>"
+            "<p style='margin-top:1rem'>YETI is rebooting with new firmware…</p></div></body></html>");
+        delay(1500);
+        ESP.restart();
+    } else {
+        StreamString err;
+        Update.printError(err);
+        String msg = "<html><body style='font-family:system-ui;background:#111;color:#eee;"
+                     "display:flex;justify-content:center;align-items:center;height:100vh'>"
+                     "<div style='text-align:center'><h2 style='color:#f66'>❌ Update Failed</h2>"
+                     "<p style='margin-top:1rem;color:#aaa'>";
+        msg += err.c_str();
+        msg += "</p><p><a href='/update' style='color:#6af'>Try again</a></p></div></body></html>";
+        _server.send(500, "text/html", msg);
+    }
+}
+
+void NetworkManager::handleOtaUpload() {
+    HTTPUpload& upload = _server.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+        _otaBytesWritten = 0;
+        Serial.printf("[OTA] Start: %s  size=%u\n", upload.filename.c_str(), upload.totalSize);
+        if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+            StreamString err; Update.printError(err);
+            Serial.printf("[OTA] begin() error: %s\n", err.c_str());
+        }
+        if (_otaProgressCb) _otaProgressCb(0);
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+        if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+            StreamString err; Update.printError(err);
+            Serial.printf("[OTA] write() error: %s\n", err.c_str());
+        }
+        _otaBytesWritten += upload.currentSize;
+        if (upload.totalSize > 0 && _otaProgressCb) {
+            uint8_t pct = (uint8_t)((_otaBytesWritten * 100UL) / upload.totalSize);
+            _otaProgressCb(pct);
+        }
+    } else if (upload.status == UPLOAD_FILE_END) {
+        if (Update.end(true)) {
+            Serial.printf("[OTA] Flashed %u bytes OK\n", upload.totalSize);
+        } else {
+            StreamString err; Update.printError(err);
+            Serial.printf("[OTA] end() error: %s\n", err.c_str());
+        }
+    }
 }
 
 TouchEvent NetworkManager::consumeSimulatedEvent() { TouchEvent e = _simulatedEvent; _simulatedEvent = TOUCH_NONE; return e; }

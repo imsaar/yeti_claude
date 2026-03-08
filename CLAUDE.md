@@ -74,7 +74,7 @@ STATE_INFO  → STATE_SETUP_AP (long-press on network screen)
 
 **`display.h/.cpp`** — `DisplayManager` owns the `Adafruit_SSD1306` instance. All face rendering is purely geometric (no bitmaps): filled circles clipped with black rectangles simulate eyelids, `drawMouth()` draws a 4-segment polyline smile/frown, triangles build hearts, crossed lines make X-eyes. The `FACE_DATA[]` table (indexed by `Expression` enum) stores `FaceParams{EyeParams left, right; int8_t brow, mouth}` for each expression. `transitionTo()` triggers a blink-in/blink-out animation via `updateAnimation()` which lerps between `FACE_DATA[_current]`, `FACE_DATA[EXPR_BLINK]`, and `FACE_DATA[_target]`. `doIdleAnimations()` handles periodic blinks (non-blocking, flag-based) and pupil wandering.
 
-**`touch.h/.cpp`** — `TouchHandler` reads GPIO7 (active-HIGH) and classifies gestures. Single-tap is held in a "pending" state until `DOUBLE_TAP_WINDOW_MS` expires or a second tap arrives. Long-press fires once at `LONG_PRESS_MS` regardless of release. Returns `TOUCH_NONE` most iterations.
+**`touch.h/.cpp`** — `TouchHandler` reads GPIO7 (active-HIGH) and classifies gestures. Single-tap is held in a "pending" state until `DOUBLE_TAP_WINDOW_MS` expires or a second tap arrives. Medium-press fires once at `MEDIUM_PRESS_MS` (1 s) while held. Long-press fires once at `LONG_PRESS_MS` (3 s) while held. Both medium and long can fire in sequence if the user holds long enough. Returns `TOUCH_NONE` most iterations.
 
 **`network.h/.cpp`** — `NetworkManager` handles everything network-related:
 - Reads/writes config from ESP32 NVS via `Preferences` (namespace `"yeti"`, keys: `ssid`, `pass`, `lat`, `lon`, `tz`)
@@ -107,7 +107,9 @@ STATE_INFO  → STATE_SETUP_AP (long-press on network screen)
 The config page HTML is built dynamically in `handleRoot()` in `network.cpp`; the CSS is a separate `PROGMEM` string served at `/s.css`. The web server routes are:
 - `GET /` → config page
 - `POST /save` → saves all fields to NVS then calls `ESP.restart()`
+- `GET /update` → OTA firmware upload page
+- `POST /update` → multipart upload handler; flashes firmware via `Update.h` and reboots on success
 - `GET /api/status` → JSON with current WiFi, weather, time, and stored config
-- `POST /api/simulate` → inject touch event (`event=single|double|long`)
+- `POST /api/simulate` → inject touch event (`event=single|double|medium|long`)
 - `POST /api/expression` → set face expression directly (`expr=0..10`)
-- `POST /api/buzz` → trigger buzzer pattern (`pattern=boot|tap|double|long|happy|sad|alert|starwars`)
+- `POST /api/buzz` → trigger buzzer pattern (`pattern=boot|tap|double|long|happy|sad|alert|starwars|purr`)

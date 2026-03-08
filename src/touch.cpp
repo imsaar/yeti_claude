@@ -37,10 +37,19 @@ TouchEvent TouchHandler::poll() {
     if (phys && !_wasPressed) {
         _wasPressed  = true;
         _pressStart  = now;
+        _mediumFired = false;
         _longFired   = false;
     }
 
-    // ── While held: fire long-press if threshold reached ───────────────────
+    // ── While held: fire medium-press then long-press at their thresholds ──
+    if (phys && _wasPressed && !_mediumFired && !_longFired) {
+        if (now - _pressStart >= MEDIUM_PRESS_MS) {
+            _mediumFired   = true;
+            _tapCount      = 0;
+            _pendingSingle = false;
+            result = TOUCH_MEDIUM;
+        }
+    }
     if (phys && _wasPressed && !_longFired) {
         if (now - _pressStart >= LONG_PRESS_MS) {
             _longFired     = true;
@@ -53,9 +62,8 @@ TouchEvent TouchHandler::poll() {
     // ── Detect press END (release) ─────────────────────────────────────────
     if (!phys && _wasPressed) {
         _wasPressed = false;
-        uint32_t duration = now - _pressStart;
 
-        if (!_longFired) {
+        if (!_longFired && !_mediumFired) {
             // Valid short tap
             _tapCount++;
             if (_tapCount == 1) {
@@ -67,7 +75,8 @@ TouchEvent TouchHandler::poll() {
                 result = TOUCH_DOUBLE;
             }
         }
-        _longFired = false;
+        _mediumFired = false;
+        _longFired   = false;
     }
 
     // ── Resolve pending single-tap after double-tap window expires ─────────

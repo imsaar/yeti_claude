@@ -23,6 +23,17 @@ static const BuzzNote SEQ_STARWARS[] = {
     {392,900},{0,0},  // end
 };
 
+// Real cat purr: 25–50 Hz cycling rate, achieved by rapid 25 ms on / 12 ms off bursts
+// at 160 Hz fundamental (~27 Hz burst rate, within cat purr range), 24 cycles ≈ 888 ms
+static const BuzzNote SEQ_PURR[] = {
+    {160,25},{0,12},{160,25},{0,12},{160,25},{0,12},{160,25},{0,12},
+    {160,25},{0,12},{160,25},{0,12},{160,25},{0,12},{160,25},{0,12},
+    {160,25},{0,12},{160,25},{0,12},{160,25},{0,12},{160,25},{0,12},
+    {160,25},{0,12},{160,25},{0,12},{160,25},{0,12},{160,25},{0,12},
+    {160,25},{0,12},{160,25},{0,12},{160,25},{0,12},{160,25},{0,12},
+    {160,25},{0,12},{160,25},{0,12},{160,25},{0,12},{160,25},{0,0},
+};
+
 static const BuzzNote SEQ_BOOT[]       = {{523,80},{659,80},{784,80},{1047,160},{0,0}};
 static const BuzzNote SEQ_TAP[]        = {{1200,35},{0,0}};
 static const BuzzNote SEQ_DOUBLE[]     = {{1200,35},{0,35},{1400,35},{0,0}};
@@ -52,6 +63,7 @@ const BuzzNote* BuzzerManager::getSequence(BuzzPattern p) {
         case BUZZ_SAD:        return SEQ_SAD;
         case BUZZ_ALERT:      return SEQ_ALERT;
         case BUZZ_STARWARS:   return SEQ_STARWARS;
+        case BUZZ_PURR:       return SEQ_PURR;
         default:              return nullptr;
     }
 }

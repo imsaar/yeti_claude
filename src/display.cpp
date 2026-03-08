@@ -54,6 +54,9 @@ const FaceParams FACE_DATA[EXPR_COUNT] = {
 
     // EXPR_WINK_R – left squinted, right closed, slight smile
     { {5, 0,  0,  0, 0}, {26,0,  0,  0, 0},  0,   7 },
+
+    // EXPR_PURR  – very squinted lids, "purrrr" text at mouth (mouth=30 is special text value)
+    { {12, 0,  0,  2, 0}, {12, 0,  0,  2, 0},  0,  30 },
 };
 
 // ─── Constructor / begin ─────────────────────────────────────────────────────
@@ -282,8 +285,19 @@ void DisplayManager::drawBrow(int cx, int cy, int8_t brow, bool isLeft) {
 // Uses a 4-segment polyline to approximate a parabolic smile / frown.
 // mouth > 0 = smile (curves downward), mouth < 0 = frown (curves upward)
 // mouth == 20 = surprised open circle
+// mouth == 30 = "purrrr" text (purr expression)
 void DisplayManager::drawMouth(int cx, int cy, int8_t mouth) {
     if (mouth == 0) return;
+
+    if (mouth == 30) {
+        _disp.setTextSize(1);
+        _disp.setTextColor(SSD1306_WHITE);
+        int16_t bx, by; uint16_t bw, bh;
+        _disp.getTextBounds("purrrr", 0, 0, &bx, &by, &bw, &bh);
+        _disp.setCursor(cx - (int16_t)(bw / 2), cy - (int16_t)(bh / 2));
+        _disp.print("purrrr");
+        return;
+    }
 
     if (mouth >= 20) {
         // Surprised O
@@ -535,6 +549,40 @@ void DisplayManager::showInfoForecast(const ForecastDay* days, uint8_t count,
         _disp.print(days[i].desc);
     }
 
+    _disp.display();
+}
+
+// ─── OTA screens ──────────────────────────────────────────────────────────────
+void DisplayManager::showOtaProgress(uint8_t pct) {
+    _disp.clearDisplay();
+    _disp.setTextColor(SSD1306_WHITE);
+    centreText("OTA Update", 4, 1);
+    _disp.drawFastHLine(0, 15, OLED_W, SSD1306_WHITE);
+
+    // Progress bar outline
+    _disp.drawRect(10, 30, 108, 12, SSD1306_WHITE);
+    // Fill proportional to pct
+    if (pct > 0) {
+        uint8_t fill = (uint8_t)((pct * 104UL) / 100);
+        _disp.fillRect(12, 32, fill, 8, SSD1306_WHITE);
+    }
+
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%u%%", (unsigned)pct);
+    centreText(buf, 48, 1);
+    _disp.display();
+}
+
+void DisplayManager::showOtaResult(bool ok) {
+    _disp.clearDisplay();
+    _disp.setTextColor(SSD1306_WHITE);
+    if (ok) {
+        centreText("Update OK!", 18, 1);
+        centreText("Rebooting...", 32, 1);
+    } else {
+        centreText("Update FAILED", 18, 1);
+        centreText("Check serial log", 32, 1);
+    }
     _disp.display();
 }
 

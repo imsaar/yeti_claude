@@ -31,6 +31,7 @@
 #define BLINK_INTERVAL_MS      3500UL  // idle blink period
 #define PUPIL_MOVE_INTERVAL_MS 8000UL  // idle pupil wander period
 #define DOUBLE_TAP_WINDOW_MS    400UL  // max gap between two taps
+#define MEDIUM_PRESS_MS        1000UL  // medium-press threshold (purr)
 #define LONG_PRESS_MS          3000UL  // long-press threshold
 #define DEBOUNCE_MS              50UL  // touch de-bounce
 #define LOVE_HOLD_MS           3000UL  // show love face before returning
@@ -67,6 +68,7 @@ enum Expression : uint8_t {
     EXPR_BLINK,
     EXPR_WINK_L,
     EXPR_WINK_R,
+    EXPR_PURR,      // contented squint triggered by medium press
     EXPR_COUNT
 };
 
@@ -98,6 +100,7 @@ enum TouchEvent : uint8_t {
     TOUCH_NONE   = 0,
     TOUCH_SINGLE,
     TOUCH_DOUBLE,
+    TOUCH_MEDIUM,   // ~1 s hold — triggers purr mode
     TOUCH_LONG,
 };
 
@@ -110,6 +113,7 @@ enum VibePattern : uint8_t {
     VIBE_LONG_PRESS,  // strong long pulse on long-press
     VIBE_ALERT,       // three rapid pulses
     VIBE_STARWARS,    // vibrates in sync with Star Wars theme
+    VIBE_PURR,        // rapid short pulses — purring haptic
 };
 
 // ─── Buzzer Patterns ─────────────────────────────────────────────────────────
@@ -123,5 +127,6 @@ enum BuzzPattern : uint8_t {
     BUZZ_SAD,         // descending phrase
     BUZZ_ALERT,       // three warning beeps
     BUZZ_STARWARS,    // Star Wars main theme (two phrases)
+    BUZZ_PURR,        // low two-tone warble — purring sound
     BUZZ_COUNT
 };

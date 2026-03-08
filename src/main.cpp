@@ -21,6 +21,7 @@ static uint32_t   lastCycleMs       = 0;
 static uint32_t   infoEnteredMs     = 0;
 static uint32_t   lastInfoRefreshMs = 0;
 static bool       loveReturning     = false;
+static bool       purrReturning     = false;
 
 // ─── Forward declarations ─────────────────────────────────────────────────────
 static void handleFaceState(TouchEvent evt);
@@ -49,6 +50,8 @@ void setup() {
     touch.begin();
 
     // Network (WiFi, NTP, web server)
+    net.setOtaProgressCallback([](uint8_t pct) { disp.showOtaProgress(pct); });
+    net.setOtaResultCallback([](bool ok) { disp.showOtaResult(ok); });
     net.begin();
 
     // Show setup screen if in AP mode
@@ -138,6 +141,14 @@ void loop() {
 
 // ─── Face mode ────────────────────────────────────────────────────────────────
 static void handleFaceState(TouchEvent evt) {
+    // Hold purr expression until purr sound finishes, then return to happy
+    if (purrReturning && !buzz.isPlaying()) {
+        purrReturning = false;
+        disp.transitionTo(EXPR_HAPPY);
+        cycleIdx = 0;
+        lastCycleMs = millis();
+    }
+
     // Hold love expression until Star Wars music finishes
     if (loveReturning && !buzz.isPlaying()) {
         loveReturning = false;
@@ -149,6 +160,7 @@ static void handleFaceState(TouchEvent evt) {
     switch (evt) {
         case TOUCH_SINGLE:
             loveReturning = false;
+            purrReturning = false;
             cycleIdx = (cycleIdx + 1) % CYCLE_COUNT;
             disp.transitionTo(CYCLE_EXPRS[cycleIdx]);
             buzz.play(BUZZ_TAP);
@@ -159,12 +171,23 @@ static void handleFaceState(TouchEvent evt) {
 
         case TOUCH_DOUBLE:
             loveReturning = false;
+            purrReturning = false;
             buzz.play(BUZZ_DOUBLE_TAP);
             motor.play(VIBE_DOUBLE_TAP);
             enterInfoMode();
             break;
 
+        case TOUCH_MEDIUM:
+            loveReturning = false;
+            purrReturning = true;
+            disp.transitionTo(EXPR_PURR);
+            buzz.play(BUZZ_PURR);
+            motor.play(VIBE_PURR);
+            Serial.println("[FACE] Purr!");
+            break;
+
         case TOUCH_LONG:
+            purrReturning = false;
             loveReturning = true;
             disp.transitionTo(EXPR_LOVE);
             buzz.play(BUZZ_STARWARS);
@@ -177,7 +200,7 @@ static void handleFaceState(TouchEvent evt) {
     }
 
     // Auto-cycle expressions every 2 minutes
-    if (!loveReturning && (millis() - lastCycleMs >= EXPRESSION_CYCLE_MS)) {
+    if (!loveReturning && !purrReturning && (millis() - lastCycleMs >= EXPRESSION_CYCLE_MS)) {
         cycleIdx = (cycleIdx + 1) % CYCLE_COUNT;
         disp.transitionTo(CYCLE_EXPRS[cycleIdx]);
         lastCycleMs = millis();
@@ -256,6 +279,7 @@ static void refreshInfoDisplay() {
 static void enterFaceMode() {
     appState          = STATE_FACE;
     loveReturning     = false;
+    purrReturning     = false;
     lastCycleMs       = millis();
     lastInteraction   = millis();
     disp.setExpression(CYCLE_EXPRS[cycleIdx]);

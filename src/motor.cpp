@@ -3,6 +3,16 @@
 // ─── Vibration pattern definitions ────────────────────────────────────────────
 // {ms, on}, terminated by {0, false}
 
+// Matches buzzer SEQ_PURR: 25 ms on / 12 ms off × 24 cycles ≈ 888 ms
+static const VibeNote SEQ_PURR[] = {
+    {25,true},{12,false},{25,true},{12,false},{25,true},{12,false},{25,true},{12,false},
+    {25,true},{12,false},{25,true},{12,false},{25,true},{12,false},{25,true},{12,false},
+    {25,true},{12,false},{25,true},{12,false},{25,true},{12,false},{25,true},{12,false},
+    {25,true},{12,false},{25,true},{12,false},{25,true},{12,false},{25,true},{12,false},
+    {25,true},{12,false},{25,true},{12,false},{25,true},{12,false},{25,true},{12,false},
+    {25,true},{12,false},{25,true},{12,false},{25,true},{12,false},{25,true},{0,false},
+};
+
 static const VibeNote SEQ_BOOT[]        = {{250,true},{0,false}};
 static const VibeNote SEQ_TAP[]         = {{40, true},{0,false}};
 static const VibeNote SEQ_DOUBLE[]      = {{40, true},{60,false},{40,true},{0,false}};
@@ -38,6 +48,7 @@ const VibeNote* MotorManager::getSequence(VibePattern p) {
         case VIBE_LONG_PRESS:  return SEQ_LONG_PRESS;
         case VIBE_ALERT:       return SEQ_ALERT;
         case VIBE_STARWARS:    return SEQ_STARWARS;
+        case VIBE_PURR:        return SEQ_PURR;
         default:               return nullptr;
     }
 }

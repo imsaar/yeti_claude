@@ -43,6 +43,8 @@ public:
     void showInfoNetwork(bool wifiOk, const char* ip, int rssi, bool apMode);
     void showInfoFirmware(uint32_t uptimeSec);
     void showInfoForecast(const ForecastDay* days, uint8_t count, bool useFahrenheit = true);
+    void showOtaProgress(uint8_t pct);  // 0–100 progress bar while uploading
+    void showOtaResult(bool ok);        // success / failure screen
 
     // ── Called every loop() ─────────────────────────────────────────────────
     void update();
