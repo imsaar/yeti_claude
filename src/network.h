@@ -109,6 +109,7 @@ private:
     void handleOtaPage();
     void handleOtaComplete();
     void handleOtaUpload();
+    void handleFactoryReset();
     void handleStyle();
     void handleNotFound();
 };

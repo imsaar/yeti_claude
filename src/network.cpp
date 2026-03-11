@@ -150,6 +150,8 @@ void NetworkManager::setupWebServer() {
     _server.on("/update",        HTTP_POST,
         [this]() { handleOtaComplete(); },
         [this]() { handleOtaUpload(); });
+    _server.on("/factory-reset", HTTP_GET,  [this]() { handleFactoryReset(); });
+    _server.on("/factory-reset", HTTP_POST, [this]() { handleFactoryReset(); });
     _server.on("/favicon.ico",   HTTP_GET,  [this]() { _server.send(204, "text/plain", ""); });
     _server.onNotFound([this]() { handleNotFound(); });
     _server.begin();
@@ -272,8 +274,9 @@ void NetworkManager::handleRoot() {
     }
 
     html += R"rawhtml(</form></div></div></div>
-<div class="S" style="text-align:center">
+<div class="S" style="text-align:center;display:flex;justify-content:center;gap:2rem">
 <a href="/update" style="color:#6af;font-size:.85rem">⬆ OTA Firmware Update</a>
+<a href="/factory-reset" style="color:#f66;font-size:.85rem">⚠ Factory Reset</a>
 </div></div></body></html>)rawhtml";
     _server.sendHeader("Cache-Control", "no-cache");
     _server.send(200, "text/html", html);
@@ -420,6 +423,34 @@ void NetworkManager::handleOtaUpload() {
             StreamString err; Update.printError(err);
             Serial.printf("[OTA] end() error: %s\n", err.c_str());
         }
+    }
+}
+
+void NetworkManager::handleFactoryReset() {
+    if (_server.method() == HTTP_POST) {
+        Serial.println("[NET] Factory reset requested — clearing NVS");
+        _prefs.clear();
+        _server.send(200, "text/html",
+            "<html><body style='font-family:system-ui;background:#111;color:#eee;"
+            "display:flex;justify-content:center;align-items:center;height:100vh'>"
+            "<div style='text-align:center'><h2 style='color:#f66'>Factory Reset</h2>"
+            "<p style='margin-top:1rem'>All settings erased. YETI is rebooting…</p>"
+            "</div></body></html>");
+        delay(1500);
+        ESP.restart();
+    } else {
+        static const char html[] PROGMEM = R"rawhtml(<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YETI Factory Reset</title><link rel="stylesheet" href="/s.css"></head><body><div class="W">
+<h1>🧊 <span>YETI</span> Factory Reset</h1>
+<p style="color:#aaa;margin-bottom:1.5rem;text-align:center">This will erase all stored settings (WiFi, location, timezone) and reboot into setup mode.</p>
+<form method="POST" action="/factory-reset">
+<button type="submit" style="background:#c33;color:#fff">Confirm Factory Reset</button>
+</form>
+<p style="margin-top:1rem;text-align:center"><a href="/" style="color:#6af">← Cancel</a></p>
+</div></body></html>)rawhtml";
+        _server.sendHeader("Cache-Control", "no-cache");
+        _server.send_P(200, "text/html", html);
     }
 }
 
