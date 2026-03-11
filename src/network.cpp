@@ -20,7 +20,7 @@ void NetworkManager::begin() {
     _pass        = _prefs.getString("pass", "");
     _lat         = _prefs.getString("lat",  "47.6062"); _lat.trim();
     _lon         = _prefs.getString("lon",  "-122.3321"); _lon.trim();
-    _tzOffsetSec = _prefs.getLong("tz", 0);
+    _tzOffsetSec = _prefs.getLong("tz", -25200);
     _useFahrenheit = _prefs.getBool("faren", true);
 
     if (_ssid.length() == 0) {
@@ -294,7 +294,7 @@ void NetworkManager::handleSave() {
     if (pass.length() > 0) _prefs.putString("pass", pass);
     _prefs.putString("lat",  lat.length() ? lat : "47.6062");
     _prefs.putString("lon",  lon.length() ? lon : "-122.3321");
-    _prefs.putLong("tz", tz.length() ? tz.toInt() : 0);
+    _prefs.putLong("tz", tz.length() ? tz.toInt() : -25200);
     _prefs.putBool("faren", faren == "1");
     _server.send(200, "text/html", "<html><body style='font-family:system-ui;background:#111;color:#eee;display:flex;justify-content:center;align-items:center;height:100vh'><div style='text-align:center'><h2 style='color:#6af'>✅ Saved!</h2><p style='margin-top:1rem'>YETI is rebooting…</p></div></body></html>");
     delay(1500); ESP.restart();
