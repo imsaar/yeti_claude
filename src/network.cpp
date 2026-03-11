@@ -18,8 +18,8 @@ void NetworkManager::begin() {
     _prefs.begin("yeti", false);
     _ssid        = _prefs.getString("ssid", "");
     _pass        = _prefs.getString("pass", "");
-    _lat         = _prefs.getString("lat",  "48.8566"); _lat.trim();
-    _lon         = _prefs.getString("lon",  "2.3522"); _lon.trim();
+    _lat         = _prefs.getString("lat",  "47.6062"); _lat.trim();
+    _lon         = _prefs.getString("lon",  "-122.3321"); _lon.trim();
     _tzOffsetSec = _prefs.getLong("tz", 0);
     _useFahrenheit = _prefs.getBool("faren", true);
 
@@ -292,8 +292,8 @@ void NetworkManager::handleSave() {
     if (ssid.length() == 0) { _server.send(400, "text/plain", "SSID required"); return; }
     _prefs.putString("ssid", ssid);
     if (pass.length() > 0) _prefs.putString("pass", pass);
-    _prefs.putString("lat",  lat.length() ? lat : "48.8566");
-    _prefs.putString("lon",  lon.length() ? lon : "2.3522");
+    _prefs.putString("lat",  lat.length() ? lat : "47.6062");
+    _prefs.putString("lon",  lon.length() ? lon : "-122.3321");
     _prefs.putLong("tz", tz.length() ? tz.toInt() : 0);
     _prefs.putBool("faren", faren == "1");
     _server.send(200, "text/html", "<html><body style='font-family:system-ui;background:#111;color:#eee;display:flex;justify-content:center;align-items:center;height:100vh'><div style='text-align:center'><h2 style='color:#6af'>✅ Saved!</h2><p style='margin-top:1rem'>YETI is rebooting…</p></div></body></html>");
