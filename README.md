@@ -104,10 +104,11 @@ pio run --target clean
 
 On first boot (no WiFi credentials stored), YETI starts an open access point:
 
-1. **SSID:** `YETI Setup` — connect from any phone or laptop
-2. Open a browser to `http://192.168.4.1`
-3. Fill in WiFi SSID, password, latitude, longitude, timezone, and **temperature unit** (F/C)
-4. Click **Save** — YETI writes the config to non-volatile storage and reboots
+1. **SSID:** `YETI` — connect from any phone or laptop
+2. **PASS** `123456789`
+3. Open a browser to `http://192.168.4.1`
+4. Fill in WiFi SSID, password, latitude, longitude, timezone, and **temperature unit** (F/C)
+5. Click **Save** — YETI writes the config to non-volatile storage and reboots
 
 ### Normal Operation
 
