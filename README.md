@@ -2,7 +2,7 @@
 
 A 3D-printed desk companion robot driven by an ESP32-C3 Mini. YETI displays animated facial expressions on a small OLED, reacts to capacitive touch gestures, shows live weather and clock data, and is configured entirely through a local web interface — no app or cloud account required.
 
-The enclosure is the [Compagnon 309 by Leroyd]([https://makerworld.com](https://makerworld.com/en/models/2109424-compagnon-309-build-your-expressive-robot#profileId-2281938)) on MakerWorld.
+The enclosure is the [Compagnon 309 by Leroyd](https://makerworld.com/en/models/2109424-compagnon-309-build-your-expressive-robot#profileId-2281938) on MakerWorld.
 
 ---
 
