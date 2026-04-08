@@ -458,7 +458,7 @@ void DisplayManager::showInfoNetwork(bool wifiOk, const char* ip, int rssi, bool
 
     if (apMode) {
         _disp.print("Mode: AP Setup");
-        _disp.setCursor(0, 24); _disp.print("SSID: YETI Setup");
+        _disp.setCursor(0, 24); _disp.print("SSID: "); _disp.print(AP_SSID);
         _disp.setCursor(0, 34); _disp.print("IP: 192.168.4.1");
     } else if (wifiOk) {
         _disp.print("WiFi: Connected");

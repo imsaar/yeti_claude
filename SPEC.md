@@ -224,9 +224,9 @@ Touch: GPIO7
 
 ### First Boot — AP Setup Mode
 
-1. ESP32-C3 starts a soft AP: SSID **`YETI Setup`**, open (no password)
+1. ESP32-C3 starts a soft AP: SSID **`YETI`**, password **`123456789`**
 2. Display shows AP SSID and IP
-3. User connects to `YETI Setup` WiFi on phone/laptop
+3. User connects to `YETI` WiFi on phone/laptop
 4. User browses to `http://192.168.4.1`
 5. Config page collects: WiFi SSID, password, latitude, longitude, UTC offset
 6. On save: all values written to NVS, device reboots into STA mode

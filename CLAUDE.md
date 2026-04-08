@@ -78,7 +78,7 @@ STATE_INFO  → STATE_SETUP_AP (long-press on network screen)
 
 **`network.h/.cpp`** — `NetworkManager` handles everything network-related:
 - Reads/writes config from ESP32 NVS via `Preferences` (namespace `"yeti"`, keys: `ssid`, `pass`, `lat`, `lon`, `tz`)
-- First boot with no `ssid` → `startAPMode()` (SSID: `YETI Setup`, IP: `192.168.4.1`)
+- First boot with no `ssid` → `startAPMode()` (SSID: `YETI`, IP: `192.168.4.1`)
 - Normal boot → `startSTA()` → mDNS at `yeti.local`
 - `update()` is non-blocking: `_server.handleClient()` + second-tick time update + weather fetch gated by `WEATHER_INTERVAL_MS`
 - Weather from Open-Meteo REST API (no API key), WMO weather codes mapped to short strings via `wmoToDesc()`
